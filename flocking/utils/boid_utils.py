@@ -19,7 +19,7 @@ LINEAR_CAP = 2
 LINEAR_PERIOD = 37 # seconds
 
 # how close robots have to be before separation becomes a concern
-SEPARATION_MIN_DISTANCE = 1.5
+SEPARATION_MIN_DISTANCE = 50
 
 
 def compute_cohesion(
@@ -31,8 +31,8 @@ def compute_cohesion(
     """
     assert this_position.shape == (2,)
 
-    other_positions = np.ndarray(other_positions)
-    assert other_positions.ndims == 2 and other_positions.shape[1] == 2
+    other_positions = np.array(other_positions)
+    assert other_positions.ndim == 2 and other_positions.shape[1] == 2
 
     average_position = other_positions.mean(axis=0)
     cohesion_vec = average_position - this_position
@@ -50,8 +50,8 @@ def compute_separation(
     """
     assert this_position.shape == (2,)
 
-    other_positions = np.ndarray(other_positions)
-    assert other_positions.ndims == 2 and other_positions.shape[1] == 2
+    other_positions = np.array(other_positions)
+    assert other_positions.ndim == 2 and other_positions.shape[1] == 2
 
     separation_vec = np.zeros((2,), dtype=float)
 
@@ -68,20 +68,20 @@ def compute_separation(
 
 def compute_alignment(
     other_positions: Sequence[np.ndarray],
-    other_last_positions: Sequence[np.ndarray],
+    last_other_positions: Sequence[np.ndarray],
     time_delta: float,
 ) -> np.ndarray:
     """
     Compute Alignment - Boids want to move together.
     """
-    assert len(other_positions) == len(other_last_positions)
+    assert len(other_positions) == len(last_other_positions)
 
-    other_positions = np.ndarray(other_positions)
-    other_last_positions = np.ndarray(other_last_positions)
-    assert other_positions.ndims == 2 and other_positions.shape[1] == 2
-    assert other_positions.shape == other_last_positions.shape
+    other_positions = np.array(other_positions)
+    last_other_positions = np.array(last_other_positions)
+    assert other_positions.ndim == 2 and other_positions.shape[1] == 2
+    assert other_positions.shape == last_other_positions.shape
 
-    other_velocities = (other_positions - other_last_positions) / time_delta
+    other_velocities = (other_positions - last_other_positions) / time_delta
     average_velocity = other_velocities.mean(axis=0)
 
     alignment_vec = normalize(average_velocity)
@@ -190,7 +190,7 @@ def compute_linear(
     assert width > 0 and height > 0
 
     robot_positions = np.array(robot_positions)
-    assert(robot_positions.ndims == 2 and robot_positions.shape[1] == 2)
+    assert(robot_positions.ndim == 2 and robot_positions.shape[1] == 2)
 
     radians = 2 * math.pi * (timestamp % LINEAR_PERIOD) / LINEAR_PERIOD
     sorted_indices = np.argsort(robot_positions, axis=0)

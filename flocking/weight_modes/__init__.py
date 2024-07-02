@@ -1,1 +1,1 @@
-from modes import get_weight_modes
+from flocking.weight_modes.modes import get_weight_mode

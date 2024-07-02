@@ -72,7 +72,7 @@ _weight_modes = {
             drive_at_human   =0.0,
             linear           =0.0,
         ),
-    "LINEAR_TRACKS": 
+    "DRIVE_AT_HUMAN": 
         WeightMode(
             goal             =0.0,
             bounds_aversion  =0.0,
@@ -80,6 +80,16 @@ _weight_modes = {
             separation       =0.0,
             alignment        =0.0,
             drive_at_human   =6.0,
+            linear           =0.0,
+        ),
+    "LINEAR_TRACKS": 
+        WeightMode(
+            goal             =0.0,
+            bounds_aversion  =0.0,
+            cohesion         =0.0,
+            separation       =0.0,
+            alignment        =0.0,
+            drive_at_human   =0.0,
             linear           =1.0,
         ),
 }
