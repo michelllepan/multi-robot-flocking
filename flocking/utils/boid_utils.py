@@ -55,7 +55,7 @@ def compute_separation(
 
     separation_vec = np.zeros((2,), dtype=float)
 
-    distance_vecs = other_positions - this_position
+    distance_vecs = this_position - other_positions
     for i in range(distance_vecs.shape[0]):
         distance_vec = distance_vecs[i]
         separation = np.linalg.norm(distance_vec) - SEPARATION_MIN_DISTANCE
