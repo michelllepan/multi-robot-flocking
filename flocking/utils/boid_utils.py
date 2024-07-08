@@ -144,7 +144,7 @@ def determine_carrot_position(
 
     center_x = (x_min + x_max) / 2
     center_y = (y_min + y_max) / 2
-    radius = min(x_max - x_min, y_max - y_min) * 0.9
+    radius = min(x_max - x_min, y_max - y_min) * 0.9 / 2
 
     # distributes the robots equally on a single track
     timestamp += robot_id / num_robots * CARROT_PERIOD
