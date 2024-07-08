@@ -33,6 +33,8 @@ class BoidRunner:
         self.last_time = time.time()
         self.current_time = time.time()
 
+        self.carrot_positions = self._get_carrots()
+
     def _get_other_positions(
         self,
         robot_id: int,
@@ -62,6 +64,17 @@ class BoidRunner:
                 self.last_robot_positions[robot_id + 1:]
             ))
         return np.vstack((other_robots, self.last_human_position))
+    
+    def _get_carrots(self):
+        carrots = []
+        for robot_id in range(self.num_robots):
+            carrots.append(
+                determine_carrot_position(
+                    robot_id=robot_id,
+                    region=(0, self.width, 0, self.height),
+                    timestamp=self.current_time,
+                    num_robots=self.num_robots))
+        return np.vstack(carrots)
 
     def _boid(
         self,
@@ -150,22 +163,36 @@ class BoidRunner:
             direction_vec = clip_by_norm(distance_vec, 1.0)
             self._maybe_move_robot(robot_id, direction_vec)
 
+        self.carrot_positions = self._get_carrots()
+
 
 def main(mode: str):
     fig, ax = plt.subplots()
 
     boid_runner = BoidRunner()
     robot_positions = boid_runner.robot_positions
-    scat = ax.scatter(x=robot_positions[:, 0], y=robot_positions[:, 1])
+    human_position = boid_runner.human_position
+    carrot_positions = boid_runner.carrot_positions
+
+    all_positions = np.vstack((robot_positions, human_position, carrot_positions))
+    all_colors = ["steelblue"] * boid_runner.num_robots + ["seagreen"] + ["coral"] * boid_runner.num_robots
+    scat = ax.scatter(
+        x=all_positions[:, 0],
+        y=all_positions[:, 1],
+        c=all_colors)
 
     ax.set_xlim(0, boid_runner.width)
     ax.set_ylim(0, boid_runner.height)
 
-    print(f"HUMAN is at {boid_runner.human_position}")
+    print(f"HUMAN is at {human_position}")
 
     def update(frame, scat, boid_runner):
         boid_runner.update(mode=mode)
-        scat.set_offsets(boid_runner.robot_positions)
+        scat.set_offsets(
+            np.vstack((
+                boid_runner.robot_positions,
+                boid_runner.human_position,
+                boid_runner.carrot_positions)))
         return scat,
 
     ani = animation.FuncAnimation(
