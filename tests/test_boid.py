@@ -6,13 +6,14 @@ from typing import Tuple
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.lines import Line2D
 
 from flocking.utils.boid_utils import *
 from flocking.utils.vector_utils import clip_by_norm
 from flocking.weight_modes import get_weight_mode
 
 
-ROBOT_MARGIN = 5
+ROBOT_MARGIN = 25
 
 class BoidRunner:
 
@@ -137,17 +138,12 @@ class BoidRunner:
         ), axis=0)
         return distance_vec
     
-    def _maybe_move_robot(
+    def move_human(
         self,
-        robot_id: int,
-        direction_vec: np.ndarray,
-    ) -> bool:
-        new_position = self.robot_positions[robot_id] + direction_vec
-        for other_pos in self._get_other_positions(robot_id):
-            if np.linalg.norm(new_position - other_pos) < ROBOT_MARGIN:
-                return False
-        self.robot_positions[robot_id] = new_position
-        return True
+        human_position: np.ndarray,
+    ):
+        self.last_human_position = np.copy(self.human_position)
+        self.human_position = human_position
     
     def update(
         self,
@@ -156,17 +152,19 @@ class BoidRunner:
         self.last_time = self.current_time
         self.current_time = time.time()
 
+        self.carrot_positions = self._get_carrots()
         self.last_robot_positions = np.copy(self.robot_positions)
 
         for robot_id in range(self.num_robots):
             distance_vec = self._boid(robot_id, mode)
             direction_vec = clip_by_norm(distance_vec, 1.0)
-            self._maybe_move_robot(robot_id, direction_vec)
+            self.robot_positions[robot_id] += direction_vec
 
-        self.carrot_positions = self._get_carrots()
-
-
-def main(mode: str):
+def main(
+    mode: str,
+    draw_carrots: bool,
+    control_human: bool,
+):
     fig, ax = plt.subplots()
 
     boid_runner = BoidRunner()
@@ -174,15 +172,36 @@ def main(mode: str):
     human_position = boid_runner.human_position
     carrot_positions = boid_runner.carrot_positions
 
-    all_positions = np.vstack((robot_positions, human_position, carrot_positions))
-    all_colors = ["steelblue"] * boid_runner.num_robots + ["seagreen"] + ["coral"] * boid_runner.num_robots
+    all_positions = np.vstack((carrot_positions, human_position, robot_positions))
+    all_colors = (
+        ["#ffc2b0" if draw_carrots else "white"] * boid_runner.num_robots +
+        ["seagreen"] +
+        ["steelblue"] * boid_runner.num_robots
+    )
     scat = ax.scatter(
         x=all_positions[:, 0],
         y=all_positions[:, 1],
         c=all_colors)
+    
+    def handle_mouse(event):
+        if event.xdata and event.ydata:
+            boid_runner.move_human(np.array([event.xdata, event.ydata]))
 
     ax.set_xlim(0, boid_runner.width)
     ax.set_ylim(0, boid_runner.height)
+    ax.set_title(f"current mode: {mode}")
+
+    robot_patch = Line2D([0], [0], marker="o", color="steelblue", linestyle="None", label="robot")
+    human_patch = Line2D([0], [0], marker="o", color="seagreen", linestyle="None", label="human")
+    carrot_patch = Line2D([0], [0], marker="o", color="#ffc2b0", linestyle="None", label="carrot")
+    
+    if draw_carrots:
+        ax.legend(handles=[robot_patch, human_patch, carrot_patch])
+    else:
+        ax.legend(handles=[robot_patch, human_patch])
+
+    if control_human:
+        plt.connect("motion_notify_event", handle_mouse)
 
     print(f"HUMAN is at {human_position}")
 
@@ -190,9 +209,9 @@ def main(mode: str):
         boid_runner.update(mode=mode)
         scat.set_offsets(
             np.vstack((
-                boid_runner.robot_positions,
+                boid_runner.carrot_positions,
                 boid_runner.human_position,
-                boid_runner.carrot_positions)))
+                boid_runner.robot_positions)))
         return scat,
 
     ani = animation.FuncAnimation(
@@ -208,5 +227,12 @@ def main(mode: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", "-m", default="DEFAULT")
+    parser.add_argument("--carrots", "-c", action="store_true")
+    parser.add_argument("--human", action="store_true")
     args = parser.parse_args()
-    main(mode=args.mode)
+
+    main(
+        mode=args.mode,
+        draw_carrots=args.carrots,
+        control_human=args.human,
+    )
