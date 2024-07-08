@@ -1,3 +1,4 @@
+import argparse
 import time
 from functools import partial
 from typing import Tuple
@@ -10,6 +11,8 @@ from flocking.utils.boid_utils import *
 from flocking.utils.vector_utils import clip_by_norm
 from flocking.weight_modes import get_weight_mode
 
+
+ROBOT_MARGIN = 5
 
 class BoidRunner:
 
@@ -66,16 +69,6 @@ class BoidRunner:
         mode: str = "DEFAULT",
     ) -> np.ndarray:
         weights = get_weight_mode(mode)
-        # from flocking.weight_modes.modes import WeightMode
-        # weights = WeightMode(
-        #     goal             =0.0,
-        #     bounds_aversion  =0.0,
-        #     cohesion         =0.0,
-        #     separation       =1.0,
-        #     alignment        =1.0,
-        #     drive_at_human   =0.1,
-        #     linear           =0.0,
-        # )
         this_position = self.robot_positions[robot_id]
 
         cohesion_vec = compute_cohesion(
@@ -131,7 +124,22 @@ class BoidRunner:
         ), axis=0)
         return distance_vec
     
-    def update(self, mode: str = "DEFAULT"):
+    def _maybe_move_robot(
+        self,
+        robot_id: int,
+        direction_vec: np.ndarray,
+    ) -> bool:
+        new_position = self.robot_positions[robot_id] + direction_vec
+        for other_pos in self._get_other_positions(robot_id):
+            if np.linalg.norm(new_position - other_pos) < ROBOT_MARGIN:
+                return False
+        self.robot_positions[robot_id] = new_position
+        return True
+    
+    def update(
+        self,
+        mode: str = "DEFAULT",
+    ):
         self.last_time = self.current_time
         self.current_time = time.time()
 
@@ -140,9 +148,10 @@ class BoidRunner:
         for robot_id in range(self.num_robots):
             distance_vec = self._boid(robot_id, mode)
             direction_vec = clip_by_norm(distance_vec, 1.0)
-            self.robot_positions[robot_id] += direction_vec
+            self._maybe_move_robot(robot_id, direction_vec)
 
-def main():
+
+def main(mode: str):
     fig, ax = plt.subplots()
 
     boid_runner = BoidRunner()
@@ -155,7 +164,7 @@ def main():
     print(f"HUMAN is at {boid_runner.human_position}")
 
     def update(frame, scat, boid_runner):
-        boid_runner.update(mode="CIRCLE")
+        boid_runner.update(mode=mode)
         scat.set_offsets(boid_runner.robot_positions)
         return scat,
 
@@ -170,4 +179,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", "-m", default="DEFAULT")
+    args = parser.parse_args()
+    main(mode=args.mode)
