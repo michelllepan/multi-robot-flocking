@@ -25,9 +25,9 @@ _weight_modes = {
     "FOLLOW": 
         WeightMode(
             goal             =0.0,
-            bounds_aversion  =0.0,
+            bounds_aversion  =1.0,
             cohesion         =0.0,
-            separation       =0.0,
+            separation       =6.0,
             alignment        =0.0,
             drive_at_human   =6.0,
             linear           =0.0,
@@ -35,7 +35,7 @@ _weight_modes = {
     "SPREAD": 
         WeightMode(
             goal             =0.0,
-            bounds_aversion  =0.0,
+            bounds_aversion  =1.0,
             cohesion         =0.0,
             separation       =1.0,
             alignment        =0.0,
@@ -47,7 +47,7 @@ _weight_modes = {
             goal             =1.0,
             bounds_aversion  =0.0,
             cohesion         =0.0,
-            separation       =0.0,
+            separation       =2.0,
             alignment        =0.0,
             drive_at_human   =0.0,
             linear           =0.0,
@@ -55,19 +55,19 @@ _weight_modes = {
     "ALIGN": 
         WeightMode(
             goal             =0.0,
-            bounds_aversion  =0.0,
+            bounds_aversion  =1.0,
             cohesion         =0.0,
-            separation       =0.0,
-            alignment        =10.,
+            separation       =2.0,
+            alignment        =2.0,
             drive_at_human   =0.0,
             linear           =0.0,
         ),
     "COHERE": 
         WeightMode(
             goal             =0.0,
-            bounds_aversion  =0.0,
+            bounds_aversion  =1.0,
             cohesion         =1.0,
-            separation       =0.0,
+            separation       =1.0,
             alignment        =0.0,
             drive_at_human   =0.0,
             linear           =0.0,
@@ -75,79 +75,9 @@ _weight_modes = {
     "LINEAR_TRACKS": 
         WeightMode(
             goal             =0.0,
-            bounds_aversion  =0.0,
-            cohesion         =0.0,
-            separation       =0.0,
-            alignment        =0.0,
-            drive_at_human   =0.0,
-            linear           =1.0,
-        ),
-    "goal_only": 
-        WeightMode(
-            goal             =1.0,
-            bounds_aversion  =0.0,
-            cohesion         =0.0,
-            separation       =0.0,
-            alignment        =0.0,
-            drive_at_human   =0.0,
-            linear           =0.0,
-        ),
-    "bounds_only": 
-        WeightMode(
-            goal             =0.0,
             bounds_aversion  =1.0,
             cohesion         =0.0,
-            separation       =0.0,
-            alignment        =0.0,
-            drive_at_human   =0.0,
-            linear           =0.0,
-        ),
-    "cohesion_only": 
-        WeightMode(
-            goal             =0.0,
-            bounds_aversion  =0.0,
-            cohesion         =1.0,
-            separation       =0.0,
-            alignment        =0.0,
-            drive_at_human   =0.0,
-            linear           =0.0,
-        ),
-    "separation_only": 
-        WeightMode(
-            goal             =0.0,
-            bounds_aversion  =0.0,
-            cohesion         =0.0,
-            separation       =1.0,
-            alignment        =0.0,
-            drive_at_human   =0.0,
-            linear           =0.0,
-        ),
-    "alignment_only": 
-        WeightMode(
-            goal             =0.0,
-            bounds_aversion  =0.0,
-            cohesion         =0.0,
-            separation       =0.0,
-            alignment        =1.0,
-            drive_at_human   =0.0,
-            linear           =0.0,
-        ),
-    "human_only": 
-        WeightMode(
-            goal             =0.0,
-            bounds_aversion  =0.0,
-            cohesion         =0.0,
-            separation       =0.0,
-            alignment        =0.0,
-            drive_at_human   =1.0,
-            linear           =0.0,
-        ),
-    "linear_only": 
-        WeightMode(
-            goal             =0.0,
-            bounds_aversion  =0.0,
-            cohesion         =0.0,
-            separation       =0.0,
+            separation       =2.0,
             alignment        =0.0,
             drive_at_human   =0.0,
             linear           =1.0,
