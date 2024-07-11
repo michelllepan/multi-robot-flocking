@@ -1,0 +1,15 @@
+import rospy
+from geometry_msgs.msg import Twist
+
+
+class VelocityPublisher:
+
+    def __init__(self, robot_id):
+        self.pub = rospy.Publisher(
+            f'/robot_{robot_id}/stretch_diff_drive_controller/cmd_vel',
+            Twist,
+            queue_size=10)
+        
+    def publish(self, message: Twist):
+        self.pub.publish(message)
+
