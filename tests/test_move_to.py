@@ -1,5 +1,6 @@
 from functools import partial
 
+import numpy as np
 import rospy
 
 from flocking.ros.robot import Robot
@@ -7,13 +8,19 @@ from flocking.ros.robot import Robot
 
 def main():
     rospy.init_node('move_to')
-    robot = Robot(robot_id=0)
+    robot_0 = Robot(robot_id=0)
     rate = rospy.Rate(10.0)
-    robot.set_goal(2, 2)
+
+    print("setting goal")
+
+    robot_0.set_goal(x=-1, y=0)
+    
     while not rospy.is_shutdown():
-        robot.update_odom()
-        if robot.check_at_goal(): break
-        robot.move_towards_goal()
+        robot_0.update_odom()
+        robot_0.print_odometry()
+        if not robot_0.check_at_pos_goal():
+            robot_0.move_toward_goal()
+
         rate.sleep()
 
 

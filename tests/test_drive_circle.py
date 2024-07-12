@@ -1,55 +1,41 @@
 from functools import partial
 
+import numpy as np
 import rospy
-from geometry_msgs.msg import Twist
-from sensor_msgs.msg import JointState
+
+from flocking.ros.robot import Robot
 
 
-class DriveCircle:
+def main():
+    rospy.init_node('move_to')
+    robot_0 = Robot(robot_id=0)
+    robot_1 = Robot(robot_id=1)
+    rate = rospy.Rate(10.0)
 
-    def __init__(self, num_robots=1):
-        self.rate = 10.0
-        self.num_robots = num_robots
-        self.cmd_vel_pubs = []
-        self.joint_states = []
+    print("setting goal")
 
-        rospy.init_node('drive_circle')
-        for i in range(self.num_robots):
-            self.cmd_vel_pubs.append(
-                rospy.Publisher(
-                    f'/robot_{i}/stretch_diff_drive_controller/cmd_vel',
-                    Twist,
-                    queue_size=10))
-            self.joint_states.append(None)
-            rospy.Subscriber(
-                f'/robot_{i}/joint_states',
-                JointState,
-                partial(self.joint_states_callback, robot_id=i))
+    robot_0.set_goal(heading=np.pi/2)
+    robot_1.set_goal(heading=-np.pi/2)
+    
+    while not rospy.is_shutdown():
+        robot_0.update_odom()
+        robot_1.update_odom()
 
-    def joint_states_callback(self, joint_state, robot_id):
-        self.joint_states[robot_id] = joint_state
+        print(robot_0.check_at_heading_goal())
+        print(robot_1.check_at_heading_goal())
 
-    def move_robot(self, robot_id, linear, angular):
-        if self.joint_states[robot_id] is None: return
+        if not robot_0.check_at_heading_goal():
+            # print("robot 0 turning")
+            robot_0.turn_toward_goal()
+        if not robot_1.check_at_heading_goal():
+            # print("robot 1 turning")
+            robot_1.turn_toward_goal()
 
-        twist = Twist()
-        twist.linear.x = linear
-        twist.angular.z = angular
-
-        pub = self.cmd_vel_pubs[robot_id]
-        pub.publish(twist)
-
-    def main(self):
-        rate = rospy.Rate(self.rate)
-        while not rospy.is_shutdown():
-            for i in range(self.num_robots):
-                self.move_robot(i, linear=0.5, angular=0.5)
-            rate.sleep()
+        rate.sleep()
 
 
 if __name__ == '__main__':
     try:
-        node = DriveCircle(num_robots=2)
-        node.main()
+        main()
     except KeyboardInterrupt:
         rospy.loginfo('interrupt received, so shutting down')
