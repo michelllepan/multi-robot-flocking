@@ -20,6 +20,8 @@ class OdomSubscriber:
 
     def __init__(self, robot_id):
         self.data = None
+        self.position = None
+        self.orientation = None
         self.sub = rospy.Subscriber(
             name=f'/robot_{robot_id}/stretch_diff_drive_controller/odom',
             data_class=Odometry,

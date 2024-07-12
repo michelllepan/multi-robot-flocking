@@ -9,10 +9,11 @@ def main():
     rospy.init_node('move_to')
     robot = Robot(robot_id=0)
     rate = rospy.Rate(10.0)
-    robot.set_goal(1, 1, 0)
+    robot.set_goal(2, 2)
     while not rospy.is_shutdown():
+        robot.update_odom()
         if robot.check_at_goal(): break
-        robot.set_goal(1, 1, 0)
+        robot.move_towards_goal()
         rate.sleep()
 
 
