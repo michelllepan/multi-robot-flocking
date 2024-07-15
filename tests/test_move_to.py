@@ -13,7 +13,7 @@ def main():
 
     print("setting goal")
 
-    robot_0.set_goal(x=-1, y=0)
+    robot_0.set_goal(x=5, y=1)
     
     while not rospy.is_shutdown():
         robot_0.update_odom()

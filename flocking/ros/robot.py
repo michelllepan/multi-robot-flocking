@@ -81,14 +81,14 @@ class Robot:
                           (np.linalg.norm(heading_vec) * np.linalg.norm(goal_vec)))
 
         twist = Twist()
-        twist.linear.x = 0.1
+        twist.linear.x = 0.7
         # print(self.x, self.y)
         if cross > 0.01:
             print("going right")
-            twist.angular.z = -0.7 * (theta / np.pi)
+            twist.angular.z = -2 * (theta / np.pi)
         elif cross < -0.01:
             print("going left")
-            twist.angular.z = 0.7 * (theta / np.pi)
+            twist.angular.z = 2 * (theta / np.pi)
         else:
             print("going straight")
             twist.angular.z = 0

@@ -19,7 +19,7 @@ LINEAR_CAP = 2
 LINEAR_PERIOD = 37 # seconds
 
 # how close robots have to be before separation becomes a concern
-SEPARATION_MIN_DISTANCE = 50
+SEPARATION_MIN_DISTANCE = 0.5
 
 
 def compute_cohesion(

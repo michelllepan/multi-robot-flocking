@@ -13,14 +13,12 @@ from flocking.utils.vector_utils import clip_by_norm
 from flocking.weight_modes import get_weight_mode
 
 
-ROBOT_MARGIN = 25
-
 class BoidRunner:
 
     def __init__(
         self,
         num_robots: int = 6,
-        canvas_dims: Tuple[int] = (480, 360),
+        canvas_dims: Tuple[int] = (6, 5),
     ):
         self.num_robots = num_robots
         self.width, self.height = canvas_dims
@@ -109,7 +107,7 @@ class BoidRunner:
         bounds_aversion_vec = compute_bounds_aversion(
             this_position=this_position,
             region=(0, self.width, 0, self.height),
-            margin=20,
+            margin=0.5,
         ) * weights.bounds_aversion
 
         goal_vec = compute_goal(
@@ -157,7 +155,7 @@ class BoidRunner:
 
         for robot_id in range(self.num_robots):
             distance_vec = self._boid(robot_id, mode)
-            direction_vec = clip_by_norm(distance_vec, 1.0)
+            direction_vec = clip_by_norm(distance_vec, 1e-2)
             self.robot_positions[robot_id] += direction_vec
 
 def main(
@@ -167,7 +165,7 @@ def main(
 ):
     fig, ax = plt.subplots()
 
-    boid_runner = BoidRunner()
+    boid_runner = BoidRunner(num_robots=3)
     robot_positions = boid_runner.robot_positions
     human_position = boid_runner.human_position
     carrot_positions = boid_runner.carrot_positions
@@ -202,8 +200,6 @@ def main(
 
     if control_human:
         plt.connect("motion_notify_event", handle_mouse)
-
-    print(f"HUMAN is at {human_position}")
 
     def update(frame, scat, boid_runner):
         boid_runner.update(mode=mode)
