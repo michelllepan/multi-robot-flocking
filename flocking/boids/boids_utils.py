@@ -21,6 +21,9 @@ LINEAR_PERIOD = 37 # seconds
 # how close robots have to be before separation becomes a concern
 SEPARATION_MIN_DISTANCE = 0.5
 
+# how close robots have to be to bounds before aversion takes effect
+MARGIN = 1.0
+
 
 def compute_cohesion(
     this_position: np.ndarray,
@@ -103,7 +106,6 @@ def compute_drive_at_human(
 def compute_bounds_aversion(
     this_position: np.ndarray,
     region: Tuple[float],
-    margin: float,
 ) -> np.ndarray:
     assert this_position.shape == (2,)
     rx, ry = this_position[0], this_position[1]
@@ -112,17 +114,17 @@ def compute_bounds_aversion(
     assert x_min < x_max and y_min < y_max
 
     # make aversion relative to how far in the margin the robot is
-    if rx < x_min + margin:
-        vx = (x_min + margin) - rx
-    elif rx > x_max - margin:
-        vx = (x_max - margin) - rx
+    if rx < x_min + MARGIN:
+        vx = (x_min + MARGIN) - rx
+    elif rx > x_max - MARGIN:
+        vx = (x_max - MARGIN) - rx
     else:
         vx = 0
 
-    if ry < y_min + margin:
-        vy = y_min + margin - ry
-    elif ry > y_max - margin:
-        vy = (y_max - margin) - ry
+    if ry < y_min + MARGIN:
+        vy = y_min + MARGIN - ry
+    elif ry > y_max - MARGIN:
+        vy = (y_max - MARGIN) - ry
     else:
         vy = 0
 
