@@ -24,6 +24,7 @@ class BoidsRunner:
         else:
             self.robot_positions = robot_start_positions
         self.last_robot_positions = np.copy(self.robot_positions)
+        self.target_positions = np.copy(self.robot_positions)
 
         self.human_position = np.random.rand(2) * canvas_dims
         self.last_human_position = np.copy(self.human_position)
@@ -140,8 +141,15 @@ class BoidsRunner:
     ):
         self.last_human_position = np.copy(self.human_position)
         self.human_position = human_position
+
+    def move_robots(
+        self,
+        robot_positions: np.ndarray,
+    ):
+        self.last_robot_positions = np.copy(self.robot_positions)
+        self.robot_positions = robot_positions
     
-    def update(
+    def update_targets(
         self,
         mode: str = "DEFAULT",
     ):
@@ -149,9 +157,9 @@ class BoidsRunner:
         self.current_time = time.time()
 
         self.carrot_positions = self._get_carrots()
-        self.last_robot_positions = np.copy(self.robot_positions)
 
         for robot_id in range(self.num_robots):
             distance_vec = self._boids(robot_id, mode)
             direction_vec = clip_by_norm(distance_vec, 1e-2)
-            self.robot_positions[robot_id] += direction_vec
+            self.target_positions[robot_id] = (self.robot_positions[robot_id] +
+                                               direction_vec)

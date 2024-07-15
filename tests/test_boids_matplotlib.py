@@ -53,7 +53,8 @@ def main(
         plt.connect("motion_notify_event", handle_mouse)
 
     def update(frame, scat, boids_runner):
-        boids_runner.update(mode=mode)
+        boids_runner.update_targets(mode=mode)
+        boids_runner.move_robots(boids_runner.target_positions)
         scat.set_offsets(
             np.vstack((
                 boids_runner.carrot_positions,
