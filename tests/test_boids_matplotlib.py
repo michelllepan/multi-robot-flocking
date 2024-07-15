@@ -9,6 +9,10 @@ from matplotlib.lines import Line2D
 from flocking.boids import BoidsRunner
 
 
+CARROT_COLOR = "ffc2b0"
+HUMAN_COLOR = "seagreen"
+ROBOT_COLOR = "steelblue"
+
 def main(
     mode: str,
     draw_carrots: bool,
@@ -23,9 +27,9 @@ def main(
 
     all_positions = np.vstack((carrot_positions, human_position, robot_positions))
     all_colors = (
-        ["#ffc2b0" if draw_carrots else "white"] * boids_runner.num_robots +
-        ["seagreen"] +
-        ["steelblue"] * boids_runner.num_robots
+        [CARROT_COLOR if draw_carrots else "white"] * boids_runner.num_robots +
+        [HUMAN_COLOR] +
+        [ROBOT_COLOR] * boids_runner.num_robots
     )
     scat = ax.scatter(
         x=all_positions[:, 0],
@@ -40,9 +44,9 @@ def main(
     ax.set_ylim(0, boids_runner.height)
     ax.set_title(f"current mode: {mode}")
 
-    robot_patch = Line2D([0], [0], marker="o", color="steelblue", linestyle="None", label="robot")
-    human_patch = Line2D([0], [0], marker="o", color="seagreen", linestyle="None", label="human")
-    carrot_patch = Line2D([0], [0], marker="o", color="#ffc2b0", linestyle="None", label="carrot")
+    robot_patch = Line2D([0], [0], marker="o", color=ROBOT_COLOR, linestyle="None", label="robot")
+    human_patch = Line2D([0], [0], marker="o", color=HUMAN_COLOR, linestyle="None", label="human")
+    carrot_patch = Line2D([0], [0], marker="o", color=CARROT_COLOR, linestyle="None", label="carrot")
     
     if draw_carrots:
         ax.legend(handles=[robot_patch, human_patch, carrot_patch])
