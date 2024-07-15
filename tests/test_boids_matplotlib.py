@@ -8,12 +8,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
-from flocking.utils.boid_utils import *
-from flocking.utils.vector_utils import clip_by_norm
+from flocking.boids.boids_utils import *
+from flocking.boids.vector_utils import clip_by_norm
 from flocking.weight_modes import get_weight_mode
 
 
-class BoidRunner:
+class BoidsRunner:
 
     def __init__(
         self,
@@ -75,7 +75,7 @@ class BoidRunner:
                     num_robots=self.num_robots))
         return np.vstack(carrots)
 
-    def _boid(
+    def _boids(
         self,
         robot_id: int,
         mode: str = "DEFAULT",
@@ -154,7 +154,7 @@ class BoidRunner:
         self.last_robot_positions = np.copy(self.robot_positions)
 
         for robot_id in range(self.num_robots):
-            distance_vec = self._boid(robot_id, mode)
+            distance_vec = self._boids(robot_id, mode)
             direction_vec = clip_by_norm(distance_vec, 1e-2)
             self.robot_positions[robot_id] += direction_vec
 
@@ -165,16 +165,16 @@ def main(
 ):
     fig, ax = plt.subplots()
 
-    boid_runner = BoidRunner(num_robots=3)
-    robot_positions = boid_runner.robot_positions
-    human_position = boid_runner.human_position
-    carrot_positions = boid_runner.carrot_positions
+    boids_runner = BoidsRunner(num_robots=3)
+    robot_positions = boids_runner.robot_positions
+    human_position = boids_runner.human_position
+    carrot_positions = boids_runner.carrot_positions
 
     all_positions = np.vstack((carrot_positions, human_position, robot_positions))
     all_colors = (
-        ["#ffc2b0" if draw_carrots else "white"] * boid_runner.num_robots +
+        ["#ffc2b0" if draw_carrots else "white"] * boids_runner.num_robots +
         ["seagreen"] +
-        ["steelblue"] * boid_runner.num_robots
+        ["steelblue"] * boids_runner.num_robots
     )
     scat = ax.scatter(
         x=all_positions[:, 0],
@@ -183,10 +183,10 @@ def main(
     
     def handle_mouse(event):
         if event.xdata and event.ydata:
-            boid_runner.move_human(np.array([event.xdata, event.ydata]))
+            boids_runner.move_human(np.array([event.xdata, event.ydata]))
 
-    ax.set_xlim(0, boid_runner.width)
-    ax.set_ylim(0, boid_runner.height)
+    ax.set_xlim(0, boids_runner.width)
+    ax.set_ylim(0, boids_runner.height)
     ax.set_title(f"current mode: {mode}")
 
     robot_patch = Line2D([0], [0], marker="o", color="steelblue", linestyle="None", label="robot")
@@ -201,18 +201,18 @@ def main(
     if control_human:
         plt.connect("motion_notify_event", handle_mouse)
 
-    def update(frame, scat, boid_runner):
-        boid_runner.update(mode=mode)
+    def update(frame, scat, boids_runner):
+        boids_runner.update(mode=mode)
         scat.set_offsets(
             np.vstack((
-                boid_runner.carrot_positions,
-                boid_runner.human_position,
-                boid_runner.robot_positions)))
+                boids_runner.carrot_positions,
+                boids_runner.human_position,
+                boids_runner.robot_positions)))
         return scat,
 
     ani = animation.FuncAnimation(
         fig=fig,
-        func=partial(update, scat=scat, boid_runner=boid_runner),
+        func=partial(update, scat=scat, boids_runner=boids_runner),
         frames=200,
         interval=50,
         blit=True,

@@ -3,7 +3,7 @@ from typing import Sequence, Tuple
 
 import numpy as np
 
-from flocking.utils.vector_utils import normalize, clip_by_norm
+from flocking.boids.vector_utils import normalize, clip_by_norm
 
 
 # period for carrot function
