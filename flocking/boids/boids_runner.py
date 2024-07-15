@@ -14,6 +14,7 @@ class BoidsRunner:
         self,
         num_robots: int = 6,
         robot_start_positions: np.ndarray = None,
+        step_scale: float = 1e-2,
         canvas_dims: Tuple[int] = (6, 5),
     ):
         self.num_robots = num_robots
@@ -33,6 +34,7 @@ class BoidsRunner:
         self.current_time = time.time()
 
         self.carrot_positions = self._get_carrots()
+        self.step_scale = step_scale
 
     def _get_other_positions(
         self,
@@ -160,6 +162,6 @@ class BoidsRunner:
 
         for robot_id in range(self.num_robots):
             distance_vec = self._boids(robot_id, mode)
-            direction_vec = clip_by_norm(distance_vec, 1e-2)
+            direction_vec = clip_by_norm(distance_vec, self.step_scale)
             self.target_positions[robot_id] = (self.robot_positions[robot_id] +
                                                direction_vec)
