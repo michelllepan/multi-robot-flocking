@@ -38,39 +38,37 @@ def main(num_robots: int = 3):
     boids_plotter = BoidsPlotter(num_robots)
 
     fig, ax = plt.subplots()
-    all_positions = np.vstack((
-        boids_plotter.robot_positions,
-        boids_plotter.target_positions))
-    all_colors = (
-        [ROBOT_COLOR] * num_robots +
-        [TARGET_COLOR] * num_robots)
-    scat = ax.scatter(
-        x=all_positions[:, 0],
-        y=all_positions[:, 1],
-        c=all_colors)
+
+    scats = []
+    for i in range(num_robots):
+        scats.append(ax.scatter(
+            x=boids_plotter.robot_positions[i][0],
+            y=boids_plotter.robot_positions[i][1],
+            c=ROBOT_COLOR,
+            marker=f"${i}$"))
+        scats.append(ax.scatter(
+            x=boids_plotter.target_positions[i][0],
+            y=boids_plotter.target_positions[i][1],
+            c=TARGET_COLOR,
+            marker=f"${i}$"))
     
     ax.set_xlim(-1, 7)
     ax.set_ylim(-1, 6)
-    ax.add_patch(
-        Rectangle(
-            (0,10), 1100, 6, linestyle = 'dashed', facecolor = 'None', clip_on=False))
 
     robot_patch = Line2D([0], [0], marker="o", color=ROBOT_COLOR, linestyle="None", label="robot")
     target_patch = Line2D([0], [0], marker="o", color=TARGET_COLOR, linestyle="None", label="target")
     
     ax.legend(handles=[robot_patch, target_patch])
 
-    def update(frame, scat, boids_plotter):
-        scat.set_offsets(
-            np.vstack((
-                boids_plotter.robot_positions,
-                boids_plotter.target_positions)))
-        # print(boids_plotter.robot_positions)
-        return scat,
+    def update(frame, scats, boids_plotter):
+        for i in range(boids_plotter.num_robots):
+            scats[i * 2].set_offsets(boids_plotter.robot_positions[i])
+            scats[i * 2 + 1].set_offsets(boids_plotter.target_positions[i])
+        return scats
 
     ani = animation.FuncAnimation(
         fig=fig,
-        func=partial(update, scat=scat, boids_plotter=boids_plotter),
+        func=partial(update, scats=scats, boids_plotter=boids_plotter),
         frames=200,
         interval=50,
         blit=True,
