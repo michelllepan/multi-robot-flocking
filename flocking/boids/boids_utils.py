@@ -19,7 +19,7 @@ LINEAR_CAP = 2
 LINEAR_PERIOD = 37 # seconds
 
 # how close robots have to be before separation becomes a concern
-SEPARATION_MIN_DISTANCE = 0.5
+SEPARATION_MIN_DISTANCE = 1.0
 
 # how close robots have to be to bounds before aversion takes effect
 MARGIN = 1.0

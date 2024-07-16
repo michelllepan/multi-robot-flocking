@@ -43,7 +43,6 @@ class Robot:
         self.goal_x = x
         self.goal_y = y
         self.goal_h = heading
-        # self.choose_direction()
 
         point = Point()
         point.x = x
@@ -88,16 +87,12 @@ class Robot:
                           (np.linalg.norm(heading_vec) * np.linalg.norm(goal_vec)))
 
         twist = Twist()
-        twist.linear.x = 0.7
-        # print(self.x, self.y)
+        twist.linear.x = 0.9
         if cross > 0.01:
-            # print("going right")
-            twist.angular.z = -2 * (theta / np.pi)
+            twist.angular.z = -1.2 * (theta / np.pi)
         elif cross < -0.01:
-            # print("going left")
-            twist.angular.z = 2 * (theta / np.pi)
+            twist.angular.z = 1.2 * (theta / np.pi)
         else:
-            # print("going straight")
             twist.angular.z = 0
 
         self.cmd_vel_pub.publish(twist)
@@ -115,24 +110,3 @@ class Robot:
 
     def print_odometry(self):
         print(f"x: {self.x : 5.2f}    y: {self.y : 5.2f}    heading: {self.h : 5.2f}")
-
-    # def turn_to(self, heading):
-    #     while not self.odom_initialized:
-    #         self.update_odom()
-
-    #     angle_to_right = (self.h - (heading - 2 * np.pi)) % (2 * np.pi)
-    #     angle_to_left = ((heading + 2 * np.pi) - self.h) % (2 * np.pi)
-
-    #     twist = Twist()
-    #     twist.linear.x = 0.0
-    #     if angle_to_right < angle_to_left:
-    #         print("turning right")
-    #         twist.angular.z = -0.5
-    #     else:
-    #         print("turning left")
-    #         twist.angular.z = 0.5
-
-    #     while not self.check_at_heading(heading):
-    #         self.cmd_vel_pub.publish(twist)
-    #         self.rate.sleep()
-    #         self.update_odom()

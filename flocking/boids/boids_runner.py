@@ -155,6 +155,7 @@ class BoidsRunner:
         self,
         mode: str = "DEFAULT",
     ):
+        print("UPDATING TARGETS")
         self.last_time = self.current_time
         self.current_time = time.time()
 

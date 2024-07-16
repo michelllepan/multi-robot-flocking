@@ -65,7 +65,7 @@ def main():
     boids_runner = BoidsRunner(
         num_robots=3,
         robot_start_positions=robot_starts,
-        step_scale=1)
+        step_scale=0.2)
     rate = rospy.Rate(10.0)
 
     boids_runner.update_targets(mode=MODE)
@@ -73,7 +73,8 @@ def main():
     t = 0
     while not rospy.is_shutdown():
         print(f"t = {t}")
-        if t % 10 == 0:
+        if t % 3 == 0:
+            boids_runner.update_targets(mode=MODE)
             for i, r in enumerate(robots):
                 r.set_goal(
                     x=boids_runner.target_positions[i, 0],
