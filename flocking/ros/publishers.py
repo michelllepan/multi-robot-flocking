@@ -1,5 +1,5 @@
 import rospy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Point, Twist
 
 
 class VelocityPublisher:
@@ -13,3 +13,14 @@ class VelocityPublisher:
     def publish(self, message: Twist):
         self.pub.publish(message)
 
+
+class TargetPublisher:
+
+    def __init__(self, robot_id):
+        self.pub = rospy.Publisher(
+            f'/robot_{robot_id}/boids_target',
+            Point,
+            queue_size=10)
+        
+    def publish(self, message: Point):
+        self.pub.publish(message)

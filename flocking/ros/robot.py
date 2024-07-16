@@ -1,17 +1,18 @@
 import numpy as np
 import rospy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Point, Twist
 from scipy.spatial.transform import Rotation
 
-from flocking.ros.publishers import VelocityPublisher
-from flocking.ros.subscribers import JointStateSubscriber, OdomSubscriber
+from flocking.ros.publishers import TargetPublisher, VelocityPublisher
+from flocking.ros.subscribers import GroundTruthSubscriber, JointStateSubscriber
 
 
 class Robot:
 
     def __init__(self, robot_id):
         self.joint_state_sub = JointStateSubscriber(robot_id)
-        self.odom_sub = OdomSubscriber(robot_id)
+        self.gt_sub = GroundTruthSubscriber(robot_id)
+        self.target_pub = TargetPublisher(robot_id)
         self.cmd_vel_pub = VelocityPublisher(robot_id)
 
         self.rate = rospy.Rate(10.0)
@@ -23,16 +24,16 @@ class Robot:
             self.update_odom()
 
     def update_odom(self):
-        if self.odom_sub.data is None: return False
+        if self.gt_sub.data is None: return False
 
-        self.x = self.odom_sub.position.x
-        self.y = self.odom_sub.position.y
+        self.x = self.gt_sub.position.x
+        self.y = self.gt_sub.position.y
 
         quat = Rotation.from_quat([
-            self.odom_sub.orientation.x,
-            self.odom_sub.orientation.y,
-            self.odom_sub.orientation.z,
-            self.odom_sub.orientation.w])
+            self.gt_sub.orientation.x,
+            self.gt_sub.orientation.y,
+            self.gt_sub.orientation.z,
+            self.gt_sub.orientation.w])
         euler = quat.as_euler("xyz") # radians
         self.h = euler[2]
 
@@ -43,6 +44,12 @@ class Robot:
         self.goal_y = y
         self.goal_h = heading
         # self.choose_direction()
+
+        point = Point()
+        point.x = x
+        point.y = y
+        self.target_pub.publish(point)
+
         self.goal_reached = False
 
     def choose_direction(self):
@@ -84,13 +91,13 @@ class Robot:
         twist.linear.x = 0.7
         # print(self.x, self.y)
         if cross > 0.01:
-            print("going right")
+            # print("going right")
             twist.angular.z = -2 * (theta / np.pi)
         elif cross < -0.01:
-            print("going left")
+            # print("going left")
             twist.angular.z = 2 * (theta / np.pi)
         else:
-            print("going straight")
+            # print("going straight")
             twist.angular.z = 0
 
         self.cmd_vel_pub.publish(twist)

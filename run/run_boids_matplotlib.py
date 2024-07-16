@@ -9,7 +9,7 @@ from matplotlib.lines import Line2D
 from flocking.boids import BoidsRunner
 
 
-CARROT_COLOR = "ffc2b0"
+CARROT_COLOR = "#ffc2b0"
 HUMAN_COLOR = "seagreen"
 ROBOT_COLOR = "steelblue"
 
@@ -20,7 +20,7 @@ def main(
 ):
     fig, ax = plt.subplots()
 
-    boids_runner = BoidsRunner(num_robots=3)
+    boids_runner = BoidsRunner(num_robots=6)
     robot_positions = boids_runner.robot_positions
     human_position = boids_runner.human_position
     carrot_positions = boids_runner.carrot_positions
