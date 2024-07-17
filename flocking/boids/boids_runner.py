@@ -199,8 +199,40 @@ class BoidsRunner:
 
         self.carrot_positions = self._get_carrots()
 
-        for robot_id in range(self.num_robots):
-            distance_vec = self._boids(robot_id, mode)
-            direction_vec = clip_by_norm(distance_vec, self.step_scale)
-            self.target_positions[robot_id] = (self.robot_positions[robot_id] +
-                                               direction_vec)
+        positions = self.robot_positions
+        last_positions = self.last_robot_positions
+        
+        current_time = self.current_time
+        last_time = self.last_time
+
+        # TODO: add movement to human
+        for i in range(steps):
+            print(current_time)
+            targets = np.zeros_like(positions)
+            for robot_id in range(self.num_robots):
+                distance_vec = self._boids_static(
+                    robot_id=robot_id,
+                    robot_positions=positions,
+                    human_position=self.human_position,
+                    last_robot_positions=last_positions,
+                    last_human_position=self.human_position,
+                    current_time=current_time,
+                    last_time=last_time,
+                    mode=mode,
+                )
+                direction_vec = clip_by_norm(distance_vec, self.step_scale)
+                targets[robot_id] = positions[robot_id] + direction_vec
+
+            last_positions = positions
+            positions = targets
+
+            time_delta = current_time - last_time
+            last_time, current_time = current_time, current_time + 0.1
+
+        self.target_positions = targets
+
+        # for robot_id in range(self.num_robots):
+        #     distance_vec = self._boids(robot_id, mode)
+        #     direction_vec = clip_by_norm(distance_vec, self.step_scale)
+        #     self.target_positions[robot_id] = (self.robot_positions[robot_id] +
+        #                                        direction_vec)
