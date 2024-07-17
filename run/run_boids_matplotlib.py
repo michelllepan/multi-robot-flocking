@@ -20,7 +20,7 @@ def main(
 ):
     fig, ax = plt.subplots()
 
-    boids_runner = BoidsRunner(num_robots=6)
+    boids_runner = BoidsRunner(num_robots=6, step_scale=0.2)
     robot_positions = boids_runner.robot_positions
     human_position = boids_runner.human_position
     carrot_positions = boids_runner.carrot_positions
