@@ -87,7 +87,12 @@ class Robot:
                           (np.linalg.norm(heading_vec) * np.linalg.norm(goal_vec)))
 
         twist = Twist()
-        twist.linear.x = 0.9
+        
+        if np.cos(theta) != 0: 
+            twist.linear.x = 2.0 * goal_vec[0] / np.cos(theta)
+        else:
+            twist.linear.x = 2.0 * goal_vec[1] / np.sin(theta)
+
         if cross > 0.01:
             twist.angular.z = -1.2 * (theta / np.pi)
         elif cross < -0.01:
