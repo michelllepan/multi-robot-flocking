@@ -36,35 +36,42 @@ class BoidsRunner:
         self.carrot_positions = self._get_carrots()
         self.step_scale = step_scale
 
+    def _get_other_positions_static(
+        self,
+        robot_id: int,
+        robot_positions: np.ndarray,
+        human_position: np.ndarray,
+    ) -> np.ndarray:
+        if robot_id == 0:
+            other_robots = robot_positions[1:]
+        elif robot_id == self.num_robots - 1:
+            other_robots = robot_positions[:-1]
+        else:
+            other_robots = np.vstack((
+                robot_positions[:robot_id],
+                robot_positions[robot_id + 1:]
+            ))
+        return np.vstack((other_robots, human_position))
+
     def _get_other_positions(
         self,
         robot_id: int,
     ) -> np.ndarray:
-        if robot_id == 0:
-            other_robots = self.robot_positions[1:]
-        elif robot_id == self.num_robots - 1:
-            other_robots = self.robot_positions[:-1]
-        else:
-            other_robots = np.vstack((
-                self.robot_positions[:robot_id],
-                self.robot_positions[robot_id + 1:]
-            ))
-        return np.vstack((other_robots, self.human_position))
+        return self._get_other_positions_static(
+            robot_id=robot_id,
+            robot_positions=self.robot_positions,
+            human_position=self.human_position,
+        )
     
     def _get_last_other_positions(
         self,
         robot_id: int,
     ) -> np.ndarray:
-        if robot_id == 0:
-            other_robots = self.last_robot_positions[1:]
-        elif robot_id == self.num_robots - 1:
-            other_robots = self.last_robot_positions[:-1]
-        else:
-            other_robots = np.vstack((
-                self.last_robot_positions[:robot_id],
-                self.last_robot_positions[robot_id + 1:]
-            ))
-        return np.vstack((other_robots, self.last_human_position))
+        return self._get_other_positions_static(
+            robot_id=robot_id,
+            robot_positions=self.last_robot_positions,
+            human_position=self.last_human_position,
+        )
     
     def _get_carrots(self):
         carrots = []
@@ -76,34 +83,49 @@ class BoidsRunner:
                     timestamp=self.current_time,
                     num_robots=self.num_robots))
         return np.vstack(carrots)
-
-    def _boids(
+    
+    def _boids_static(
         self,
         robot_id: int,
+        robot_positions: np.ndarray,
+        human_position: np.ndarray,
+        last_robot_positions: np.ndarray,
+        last_human_position: np.ndarray,
+        current_time: float,
+        last_time: float,
         mode: str = "DEFAULT",
     ) -> np.ndarray:
         weights = get_weight_mode(mode)
-        this_position = self.robot_positions[robot_id]
+        this_position = robot_positions[robot_id]
+        other_positions = self._get_other_positions_static(
+            robot_id=robot_id,
+            robot_positions=robot_positions,
+            human_position=human_position)
+        last_other_positions = self._get_other_positions_static(
+            robot_id=robot_id,
+            robot_positions=last_robot_positions,
+            human_position=last_human_position)
+        time_delta = current_time - last_time
 
         cohesion_vec = compute_cohesion(
             this_position=this_position,
-            other_positions=self._get_other_positions(robot_id),
+            other_positions=other_positions,
         ) * weights.cohesion
 
         separation_vec = compute_separation(
             this_position=this_position,
-            other_positions=self._get_other_positions(robot_id),
+            other_positions=other_positions,
         ) * weights.separation
 
         alignment_vec = compute_alignment(
-            other_positions=self._get_other_positions(robot_id),
-            last_other_positions=self._get_last_other_positions(robot_id),
-            time_delta=(self.current_time - self.last_time),
+            other_positions=other_positions,
+            last_other_positions=last_other_positions,
+            time_delta=time_delta,
         ) * weights.alignment
 
         drive_at_human_vec = compute_drive_at_human(
             this_position=this_position,
-            human_position=self.human_position,
+            human_position=human_position,
         ) * weights.drive_at_human
 
         bounds_aversion_vec = compute_bounds_aversion(
@@ -115,15 +137,15 @@ class BoidsRunner:
             this_position=this_position,
             robot_id=robot_id,
             region=(0, self.width, 0, self.height),
-            timestamp=self.current_time,
+            timestamp=current_time,
             num_robots=self.num_robots,
         ) * weights.goal
 
         linear_vec = compute_linear(
             robot_id=robot_id,
             region=(0, self.width, 0, self.height),
-            timestamp=self.current_time,
-            robot_positions=self.robot_positions,
+            timestamp=current_time,
+            robot_positions=robot_positions,
         ) * weights.linear
 
         distance_vec = np.sum((
@@ -136,6 +158,22 @@ class BoidsRunner:
             linear_vec,
         ), axis=0)
         return distance_vec
+
+    def _boids(
+        self,
+        robot_id: int,
+        mode: str = "DEFAULT",
+    ) -> np.ndarray:
+        return self._boids_static(
+            robot_id=robot_id,
+            robot_positions=self.robot_positions,
+            human_position=self.human_position,
+            last_robot_positions=self.last_robot_positions,
+            last_human_position=self.last_human_position,
+            current_time=self.current_time,
+            last_time=self.last_time,
+            mode=mode,
+        )
     
     def move_human(
         self,
@@ -153,6 +191,7 @@ class BoidsRunner:
     
     def update_targets(
         self,
+        steps: int = 1,
         mode: str = "DEFAULT",
     ):
         self.last_time = self.current_time
