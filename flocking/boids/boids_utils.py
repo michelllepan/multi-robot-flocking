@@ -7,7 +7,7 @@ from flocking.boids.vector_utils import normalize, clip_by_norm
 
 
 # period for carrot function
-CARROT_PERIOD = 50 # seconds
+CARROT_PERIOD = 180 # seconds
 
 # cap goal influence
 GOAL_CAP = 2
@@ -22,7 +22,7 @@ LINEAR_PERIOD = 37 # seconds
 SEPARATION_MIN_DISTANCE = 1.0
 
 # how close robots have to be to bounds before aversion takes effect
-MARGIN = 1.0
+MARGIN = 2.0
 
 
 def compute_cohesion(

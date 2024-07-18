@@ -55,26 +55,26 @@ def viz(boids_runner: BoidsRunner):
     plt.show()
 
 
-def main():
+def main(num_robots: int = 3):
     rospy.init_node('boids_circle')
-    robots = [Robot(robot_id=i) for i in range(3)]
+    robots = [Robot(robot_id=i) for i in range(num_robots)]
     for r in robots:
         r.update_odom()
 
     robot_starts = np.array([[r.x, r.y] for r in robots])
     boids_runner = BoidsRunner(
-        num_robots=3,
+        num_robots=num_robots,
         robot_start_positions=robot_starts,
         step_scale=0.02)
     rate = rospy.Rate(10.0)
 
-    boids_runner.update_targets(steps=100, mode=MODE)
+    boids_runner.update_targets(steps=15, mode=MODE)
 
     t = 0
     while not rospy.is_shutdown():
         print(f"t = {t}")
         if t % 3 == 0:
-            boids_runner.update_targets(steps=20, mode=MODE)
+            boids_runner.update_targets(steps=30, mode=MODE)
             for i, r in enumerate(robots):
                 r.set_goal(
                     x=boids_runner.target_positions[i, 0],

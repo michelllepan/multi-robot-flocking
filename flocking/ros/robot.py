@@ -10,6 +10,8 @@ from flocking.ros.subscribers import GroundTruthSubscriber, JointStateSubscriber
 class Robot:
 
     def __init__(self, robot_id):
+        self.robot_id = robot_id
+
         self.joint_state_sub = JointStateSubscriber(robot_id)
         self.gt_sub = GroundTruthSubscriber(robot_id)
         self.target_pub = TargetPublisher(robot_id)
@@ -88,17 +90,22 @@ class Robot:
 
         twist = Twist()
         
-        if np.cos(theta) != 0: 
-            twist.linear.x = 2.0 * goal_vec[0] / np.cos(theta)
+        if abs(np.cos(self.h)) > 0.1: 
+            twist.linear.x = 30.0 * goal_vec[0] / np.cos(self.h)
         else:
-            twist.linear.x = 2.0 * goal_vec[1] / np.sin(theta)
+            twist.linear.x = 30.0 * goal_vec[1] / np.sin(self.h)
 
+        # TODO: clean up
         if cross > 0.01:
-            twist.angular.z = -1.2 * (theta / np.pi)
+            twist.angular.z = -2 * (theta / np.pi)
         elif cross < -0.01:
-            twist.angular.z = 1.2 * (theta / np.pi)
+            twist.angular.z = 2 * (theta / np.pi)
         else:
             twist.angular.z = 0
+
+        print(f"ROBOT {self.robot_id}   heading: [{heading_vec[0] : .2f} {heading_vec[1] : .2f}]    goal: [{goal_vec[0] : .2f} {goal_vec[1] : .2f}]    h: {self.h : .2f}   twist_x: {twist.linear.x : 5.2f}    twist_z: {twist.angular.z : 5.2f}")
+        # print(f"ROBOT {self.robot_id}   twist_x: {twist.linear.x : 5.2f}      twist_z: {twist.angular.z : 5.2f}")
+        # print(f"ROBOT {self.robot_id}   cross: {cross : 5.2f}   theta: {theta : 5.2f}")
 
         self.cmd_vel_pub.publish(twist)
 
@@ -114,4 +121,4 @@ class Robot:
         self.cmd_vel_pub.publish(twist)
 
     def print_odometry(self):
-        print(f"x: {self.x : 5.2f}    y: {self.y : 5.2f}    heading: {self.h : 5.2f}")
+        print(f"ROBOT {self.robot_id}    x: {self.x : 5.2f}    y: {self.y : 5.2f}    heading: {self.h : 5.2f}")
