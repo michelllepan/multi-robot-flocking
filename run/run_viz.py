@@ -7,10 +7,11 @@ import rospy
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 
-from flocking.ros.subscribers import GroundTruthSubscriber, TargetSubscriber
+from flocking.ros.subscribers import *
 
 TARGET_COLOR = "mediumpurple"
 ROBOT_COLOR = "steelblue"
+CARROT_COLOR = "#ffc2b0"
 
 
 class BoidsPlotter:
@@ -20,6 +21,7 @@ class BoidsPlotter:
         self.num_robots = num_robots
         self.robot_subs = [GroundTruthSubscriber(i) for i in range(num_robots)]
         self.target_subs = [TargetSubscriber(i) for i in range(num_robots)]
+        self.carrot_subs = [CarrotSubscriber(i) for i in range(num_robots)]
 
     @property
     def robot_positions(self):
@@ -32,6 +34,13 @@ class BoidsPlotter:
         return np.array([
             [s.data.x, s.data.y] if s.data else [0, 0]
             for s in self.target_subs])
+    
+    @property
+    def carrot_positions(self):
+        return np.array([
+            [s.data.x, s.data.y] if s.data else [0, 0]
+            for s in self.carrot_subs])
+
 
 
 def main(num_robots: int = 3):
@@ -51,6 +60,11 @@ def main(num_robots: int = 3):
             y=boids_plotter.target_positions[i][1],
             c=TARGET_COLOR,
             marker=f"${i}$"))
+        scats.append(ax.scatter(
+            x=boids_plotter.carrot_positions[i][0],
+            y=boids_plotter.carrot_positions[i][1],
+            c=CARROT_COLOR,
+            marker=f"${i}$"))
     
     ax.set_xlim(-1, 7)
     ax.set_ylim(-1, 6)
@@ -62,8 +76,9 @@ def main(num_robots: int = 3):
 
     def update(frame, scats, boids_plotter):
         for i in range(boids_plotter.num_robots):
-            scats[i * 2].set_offsets(boids_plotter.robot_positions[i])
-            scats[i * 2 + 1].set_offsets(boids_plotter.target_positions[i])
+            scats[i * 3].set_offsets(boids_plotter.robot_positions[i])
+            scats[i * 3 + 1].set_offsets(boids_plotter.target_positions[i])
+            scats[i * 3 + 2].set_offsets(boids_plotter.carrot_positions[i])
         return scats
 
     ani = animation.FuncAnimation(

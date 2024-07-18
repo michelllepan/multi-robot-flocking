@@ -62,3 +62,16 @@ class TargetSubscriber:
         
     def callback(self, data):
         self.data = data
+
+
+class CarrotSubscriber:
+
+    def __init__(self, robot_id):
+        self.data = None
+        self.sub = rospy.Subscriber(
+            name=f'/robot_{robot_id}/boids_carrot',
+            data_class=Point,
+            callback=self.callback)
+        
+    def callback(self, data):
+        self.data = data

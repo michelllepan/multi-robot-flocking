@@ -2,9 +2,11 @@ import time
 from typing import Tuple
 
 import numpy as np
+from geometry_msgs.msg import Point
 
 from flocking.boids.boids_utils import *
 from flocking.boids.vector_utils import clip_by_norm
+from flocking.ros.publishers import CarrotPublisher
 from flocking.weight_modes import get_weight_mode
 
 
@@ -32,7 +34,8 @@ class BoidsRunner:
 
         self.last_time = time.time()
         self.current_time = time.time()
-
+        
+        self.carrot_pubs = [CarrotPublisher(i) for i in range(num_robots)]
         self.carrot_positions = self._get_carrots()
         self.step_scale = step_scale
 
@@ -76,12 +79,18 @@ class BoidsRunner:
     def _get_carrots(self):
         carrots = []
         for robot_id in range(self.num_robots):
-            carrots.append(
-                determine_carrot_position(
-                    robot_id=robot_id,
-                    region=(0, self.width, 0, self.height),
-                    timestamp=self.current_time,
-                    num_robots=self.num_robots))
+            pos = determine_carrot_position(
+                robot_id=robot_id,
+                region=(0, self.width, 0, self.height),
+                timestamp=self.current_time,
+                num_robots=self.num_robots)
+            carrots.append(pos)
+
+            point = Point()
+            point.x = pos[0]
+            point.y = pos[1]
+            self.carrot_pubs[robot_id].publish(point)
+            
         return np.vstack(carrots)
     
     def _boids_static(
@@ -207,7 +216,6 @@ class BoidsRunner:
 
         # TODO: add movement to human
         for i in range(steps):
-            print(current_time)
             targets = np.zeros_like(positions)
             for robot_id in range(self.num_robots):
                 distance_vec = self._boids_static(
