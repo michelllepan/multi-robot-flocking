@@ -89,11 +89,11 @@ class Robot:
                           (np.linalg.norm(heading_vec) * np.linalg.norm(goal_vec)))
 
         twist = Twist()
-        
-        if abs(np.cos(self.h)) > 0.1: 
-            twist.linear.x = 30.0 * goal_vec[0] / np.cos(self.h)
+
+        if theta < np.pi / 2:
+            twist.linear.x = np.linalg.norm(goal_vec)
         else:
-            twist.linear.x = 30.0 * goal_vec[1] / np.sin(self.h)
+            twist.linear.x = 0
 
         # TODO: clean up
         if cross > 0.01:
@@ -103,9 +103,7 @@ class Robot:
         else:
             twist.angular.z = 0
 
-        print(f"ROBOT {self.robot_id}   heading: [{heading_vec[0] : .2f} {heading_vec[1] : .2f}]    goal: [{goal_vec[0] : .2f} {goal_vec[1] : .2f}]    h: {self.h : .2f}   twist_x: {twist.linear.x : 5.2f}    twist_z: {twist.angular.z : 5.2f}")
-        # print(f"ROBOT {self.robot_id}   twist_x: {twist.linear.x : 5.2f}      twist_z: {twist.angular.z : 5.2f}")
-        # print(f"ROBOT {self.robot_id}   cross: {cross : 5.2f}   theta: {theta : 5.2f}")
+        print(f"ROBOT {self.robot_id}   goal: [{goal_vec[0] : 5.2f} {goal_vec[1] : 5.2f}] | heading: {self.h : 5.2f} | twist_x: {twist.linear.x : 5.2f} | twist_z: {twist.angular.z : 5.2f}")
 
         self.cmd_vel_pub.publish(twist)
 
