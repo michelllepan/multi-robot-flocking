@@ -2,11 +2,9 @@ import time
 from typing import Tuple
 
 import numpy as np
-from geometry_msgs.msg import Point
 
 from flocking.boids.boids_utils import *
 from flocking.boids.vector_utils import clip_by_norm
-from flocking.ros.publishers import CarrotPublisher
 from flocking.weight_modes import get_weight_mode
 
 
@@ -18,6 +16,7 @@ class BoidsRunner:
         robot_start_positions: np.ndarray = None,
         step_scale: float = 1e-2,
         canvas_dims: Tuple[int] = (6, 5),
+        publish_carrots: bool = False,
     ):
         self.num_robots = num_robots
         self.width, self.height = canvas_dims
@@ -35,7 +34,11 @@ class BoidsRunner:
         self.last_time = time.time()
         self.current_time = time.time()
         
-        self.carrot_pubs = [CarrotPublisher(i) for i in range(num_robots)]
+        self.publish_carrots = publish_carrots
+        if self.publish_carrots:
+            from geometry_msgs.msg import Point
+            from flocking.ros.publishers import CarrotPublisher
+            self.carrot_pubs = [CarrotPublisher(i) for i in range(num_robots)]
         self.carrot_positions = self._get_carrots()
         self.step_scale = step_scale
 
@@ -86,11 +89,12 @@ class BoidsRunner:
                 num_robots=self.num_robots)
             carrots.append(pos)
 
-            point = Point()
-            point.x = pos[0]
-            point.y = pos[1]
-            self.carrot_pubs[robot_id].publish(point)
-            
+            if self.publish_carrots:
+                point = Point()
+                point.x = pos[0]
+                point.y = pos[1]
+                self.carrot_pubs[robot_id].publish(point)
+                
         return np.vstack(carrots)
     
     def _boids_static(

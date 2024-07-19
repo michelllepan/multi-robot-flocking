@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import rospy
 from geometry_msgs.msg import Point, Twist
@@ -6,6 +8,9 @@ from scipy.spatial.transform import Rotation
 from flocking.ros.publishers import TargetPublisher, VelocityPublisher
 from flocking.ros.subscribers import GroundTruthSubscriber, JointStateSubscriber
 
+
+MAX_LIN_ACCEL = 1
+MAX_ANG_ACCEL = 0.2
 
 class Robot:
 
@@ -19,6 +24,8 @@ class Robot:
 
         self.rate = rospy.Rate(10.0)
         self.turn_direction = "left"
+        self.lin_vel = 0
+        self.ang_vel = 0
         self.goal_reached = True
 
         print("initializing odom")
@@ -90,18 +97,29 @@ class Robot:
 
         twist = Twist()
 
+        # set linear velocity
         if theta < np.pi / 2:
-            twist.linear.x = np.linalg.norm(goal_vec)
+            new_lin_vel = min(10 * np.linalg.norm(goal_vec), 7.0) 
         else:
-            twist.linear.x = 0
+            new_lin_vel = 0
 
-        # TODO: clean up
+        lin_accel = new_lin_vel - self.lin_vel
+        lin_accel = math.copysign(min(abs(lin_accel), MAX_LIN_ACCEL), lin_accel)
+        self.lin_vel += lin_accel
+        twist.linear.x = self.lin_vel
+
+        # set angular velocity
         if cross > 0.01:
-            twist.angular.z = -2 * (theta / np.pi)
+            new_ang_vel = -min(2 * (theta / np.pi), 1.0)
         elif cross < -0.01:
-            twist.angular.z = 2 * (theta / np.pi)
+            new_ang_vel = min(2 * (theta / np.pi), 1.0)
         else:
-            twist.angular.z = 0
+            new_ang_vel = 0
+
+        ang_accel = new_ang_vel - self.ang_vel
+        ang_accel = math.copysign(min(abs(ang_accel), MAX_ANG_ACCEL), ang_accel)
+        self.ang_vel += ang_accel
+        twist.angular.z = self.ang_vel
 
         print(f"ROBOT {self.robot_id}   goal: [{goal_vec[0] : 5.2f} {goal_vec[1] : 5.2f}] | heading: {self.h : 5.2f} | twist_x: {twist.linear.x : 5.2f} | twist_z: {twist.angular.z : 5.2f}")
 

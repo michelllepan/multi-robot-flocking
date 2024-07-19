@@ -1,3 +1,4 @@
+import argparse
 from functools import partial
 
 import matplotlib.animation as animation
@@ -66,8 +67,8 @@ def main(num_robots: int = 3):
             c=CARROT_COLOR,
             marker=f"${i}$"))
     
-    ax.set_xlim(-1, 7)
-    ax.set_ylim(-1, 6)
+    ax.set_xlim(-1, 16)
+    ax.set_ylim(-1, 13)
 
     robot_patch = Line2D([0], [0], marker="o", color=ROBOT_COLOR, linestyle="None", label="robot")
     target_patch = Line2D([0], [0], marker="o", color=TARGET_COLOR, linestyle="None", label="target")
@@ -93,6 +94,9 @@ def main(num_robots: int = 3):
 
 if __name__ == '__main__':
     try:
-        main()
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--num_robots", "-n", type=int, default=3)
+        args = parser.parse_args()
+        main(num_robots=args.num_robots)
     except KeyboardInterrupt:
         rospy.loginfo('interrupt received, so shutting down')

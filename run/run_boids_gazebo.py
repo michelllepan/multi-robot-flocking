@@ -1,61 +1,18 @@
-from functools import partial
-from multiprocessing import Process
+import argparse
 
-import matplotlib.animation as animation
-import matplotlib.pyplot as plt
 import numpy as np
 import rospy
-from matplotlib.lines import Line2D
 
 from flocking.boids import BoidsRunner
 from flocking.ros.robot import Robot
 
 
-MODE = "CIRCLE"
+MODE = "LINEAR_TRACKS"
 TARGET_COLOR = "mediumpurple"
 ROBOT_COLOR = "steelblue"
 
 
-def viz(boids_runner: BoidsRunner):
-    fig, ax = plt.subplots()
-    all_positions = np.vstack((
-        boids_runner.robot_positions,
-        boids_runner.target_positions))
-    all_colors = (
-        [ROBOT_COLOR] * boids_runner.num_robots +
-        [TARGET_COLOR] * boids_runner.num_robots)
-    scat = ax.scatter(
-        x=all_positions[:, 0],
-        y=all_positions[:, 1],
-        c=all_colors)
-    
-    ax.set_xlim(0, boids_runner.width)
-    ax.set_ylim(0, boids_runner.height)
-    ax.set_title(f"current mode: {MODE}")
-
-    robot_patch = Line2D([0], [0], marker="o", color=ROBOT_COLOR, linestyle="None", label="robot")
-    target_patch = Line2D([0], [0], marker="o", color=TARGET_COLOR, linestyle="None", label="target")
-    
-    ax.legend(handles=[robot_patch, target_patch])
-
-    def update(frame, scat, boids_runner):
-        scat.set_offsets(
-            np.vstack((
-                boids_runner.robot_positions,
-                boids_runner.target_positions)))
-        return scat,
-
-    ani = animation.FuncAnimation(
-        fig=fig,
-        func=partial(update, scat=scat, boids_runner=boids_runner),
-        frames=200,
-        interval=50,
-        blit=True,
-    )
-    plt.show()
-
-
-def main(num_robots: int = 3):
+def main(num_robots: int = 3, mode: str = "DEFAULT"):
     rospy.init_node('boids_circle')
     robots = [Robot(robot_id=i) for i in range(num_robots)]
     for r in robots:
@@ -65,16 +22,18 @@ def main(num_robots: int = 3):
     boids_runner = BoidsRunner(
         num_robots=num_robots,
         robot_start_positions=robot_starts,
-        step_scale=0.02)
+        step_scale=0.02,
+        canvas_dims=(15, 12))
     rate = rospy.Rate(10.0)
 
-    boids_runner.update_targets(steps=15, mode=MODE)
+    boids_runner.move_human(np.array([-1, -1]))
+    boids_runner.update_targets(steps=50, mode=mode)
 
     t = 0
     while not rospy.is_shutdown():
         print(f"t = {t}")
         if t % 3 == 0:
-            boids_runner.update_targets(steps=30, mode=MODE)
+            boids_runner.update_targets(steps=50, mode=mode)
             for i, r in enumerate(robots):
                 r.set_goal(
                     x=boids_runner.target_positions[i, 0],
@@ -94,6 +53,13 @@ def main(num_robots: int = 3):
 
 if __name__ == '__main__':
     try:
-        main()
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--num_robots", "-n", type=int, default=3)
+        parser.add_argument("--mode", "-m", default="DEFAULT")
+        args = parser.parse_args()
+        main(
+            num_robots=args.num_robots,
+            mode=args.mode,
+        )
     except KeyboardInterrupt:
         rospy.loginfo('interrupt received, so shutting down')
