@@ -9,8 +9,8 @@ from flocking.ros.publishers import TargetPublisher, VelocityPublisher
 from flocking.ros.subscribers import GroundTruthSubscriber, JointStateSubscriber
 
 
-MAX_LIN_ACCEL = 1
-MAX_ANG_ACCEL = 0.2
+MAX_LIN_ACCEL = 0.7
+MAX_ANG_ACCEL = 0.1
 
 class Robot:
 
@@ -22,7 +22,6 @@ class Robot:
         self.target_pub = TargetPublisher(robot_id)
         self.cmd_vel_pub = VelocityPublisher(robot_id)
 
-        self.rate = rospy.Rate(10.0)
         self.turn_direction = "left"
         self.lin_vel = 0
         self.ang_vel = 0
