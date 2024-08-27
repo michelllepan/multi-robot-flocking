@@ -37,6 +37,6 @@ class Director(Node):
     def step_flocking(self):
         for r in self.robots:
             goal = Point()
-            goal.x = 1.0
+            goal.x = 2.0
             goal.y = 1.0
             self.goal_pubs[r].publish(goal)

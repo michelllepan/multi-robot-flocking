@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-
+import numpy as np
 from scipy.spatial.transform import Rotation
 
 import rclpy
@@ -13,8 +12,8 @@ from .utils import Goal, Odom
 
 
 GOAL_TOLERANCE = 0.1
-LIN_VEL_SCALE = 1
-ANG_VEL_SCALE = 1
+LIN_VEL_SCALE = 0.2
+ANG_VEL_SCALE = 2.0
 
 class Robot(Node):
 
@@ -49,6 +48,8 @@ class Robot(Node):
         if self.odom is None or self.goal is None: return
         if self.check_at_goal(): return
 
+        self.print_odometry()
+
         # unit vector of the heading
         heading_vec = np.array([np.cos(self.odom.h), np.sin(self.odom.h)])
         # vector from the robot to goal
@@ -66,7 +67,7 @@ class Robot(Node):
         if theta < np.pi / 2:
             self.twist.linear.x = np.tanh(LIN_VEL_SCALE * np.linalg.norm(goal_vec))
         else:
-            self.twist.linear.x = 0
+            self.twist.linear.x = 0.0
 
         # calculate angular velocity
         if cross > 0.01:
@@ -74,7 +75,7 @@ class Robot(Node):
         elif cross < -0.01:
             self.twist.angular.z = ANG_VEL_SCALE * theta
         else:
-            self.twist.angular.z = 0
+            self.twist.angular.z = 0.0
 
         # publish twist
         self.vel_pub.publish(self.twist)
@@ -90,8 +91,8 @@ class Robot(Node):
             y=msg.y)
 
     def odom_callback(self, msg: Odometry):
-        position = data.pose.pose.position
-        orientation = data.pose.pose.orientation
+        position = msg.pose.pose.position
+        orientation = msg.pose.pose.orientation
 
         quat = Rotation.from_quat([
             orientation.x,

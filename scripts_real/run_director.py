@@ -9,7 +9,7 @@ def main(args=None, robots=(1,)):
     rclpy.init(args=args)
     director = Director(robots=robots)
     rclpy.spin(director)
-    detector.destroy_node()
+    director.destroy_node()
     rclpy.shutdown()
 
 
