@@ -13,8 +13,8 @@ from .utils import Goal, Pose
 
 
 GOAL_TOLERANCE = 0.1
-LIN_VEL_SCALE = 0.2
-ANG_VEL_SCALE = 2.0
+LIN_VEL_SCALE = 0.5
+ANG_VEL_SCALE = 1.25
 
 REDIS_HOST = "localhost"
 REDIS_PORT = "6379"
@@ -108,7 +108,7 @@ class Robot(Node):
         self.pose = Pose(
             x=position.x,
             y=position.y,
-            h=euler[2])
+            h=float(euler[2]))
         self.redis_update_pose()
         
         self.move_toward_goal()
