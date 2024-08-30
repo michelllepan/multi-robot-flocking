@@ -49,6 +49,10 @@ class Robot(Node):
         self.goal = None
         self.twist = Twist()
 
+        # clear old goal
+        self.redis_update_pose()
+        self.redis_client.set(self.goal_key, str(Goal(x=0.0, y=0.0)))
+
         self.obstacle_present = False
 
     def check_at_goal(self) -> bool:
