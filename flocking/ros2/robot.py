@@ -13,8 +13,10 @@ from .utils import Goal, Pose
 
 
 GOAL_TOLERANCE = 0.1
+OBS_TOLERANCE = 0.5
+
 LIN_VEL_SCALE = 0.5
-ANG_VEL_SCALE = 1.25
+ANG_VEL_SCALE = 1.5
 
 REDIS_HOST = "localhost"
 REDIS_PORT = "6379"
@@ -47,6 +49,8 @@ class Robot(Node):
         self.goal = None
         self.twist = Twist()
 
+        self.obstacle_present = False
+
     def check_at_goal(self) -> bool:
         if self.pose is None or self.goal is None:
             return False
@@ -56,6 +60,7 @@ class Robot(Node):
     def move_toward_goal(self):
         if self.pose is None or self.goal is None: return
         if self.check_at_goal(): return
+        if self.obstacle_present: return
 
         self.print_pose()
 
@@ -114,7 +119,16 @@ class Robot(Node):
         self.move_toward_goal()
 
     def scan_callback(self, msg: LaserScan):
-        pass
+        angles = np.linspace(msg.angle_min, msg.angle_max, len(msg.ranges))
+
+        # Work out the y coordinates of the ranges
+        points = [r * np.sin(theta) if (theta < -2.5 or theta > 2.5) else np.inf for r,theta in zip(msg.ranges, angles)]
+
+        # If we're close to the x axis, keep the range, otherwise use inf, which means "no return"
+        new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
+
+        # If closest measured scan is within obstacle threshold, stop
+        self.obstacle_present = min(new_ranges) < OBS_TOLERANCE
 
     ### REDIS LISTENER
 
