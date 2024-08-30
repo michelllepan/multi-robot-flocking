@@ -36,9 +36,7 @@ class BoidsRunner:
         
         self.publish_carrots = publish_carrots
         if self.publish_carrots:
-            from geometry_msgs.msg import Point
-            from flocking.ros.publishers import CarrotPublisher
-            self.carrot_pubs = [CarrotPublisher(i) for i in range(num_robots)]
+            pass
         self.carrot_positions = self._get_carrots()
         self.step_scale = step_scale
 
