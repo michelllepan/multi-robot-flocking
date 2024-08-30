@@ -1,16 +1,14 @@
 import argparse
-
-import rclpy
+import time
 
 from flocking.ros2 import Director
 
 
 def main(args=None, robots=(1,)):
-    rclpy.init(args=args)
     director = Director(robots=robots)
-    rclpy.spin(director)
-    director.destroy_node()
-    rclpy.shutdown()
+    while True:
+        director.step_flocking()
+        time.sleep(0.1)
 
 
 if __name__ == '__main__':

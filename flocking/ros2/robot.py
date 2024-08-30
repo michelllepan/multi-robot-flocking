@@ -1,4 +1,5 @@
 import numpy as np
+import redis
 from scipy.spatial.transform import Rotation
 
 import rclpy
@@ -8,12 +9,15 @@ from geometry_msgs.msg import Point, Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import BatteryState, LaserScan
 
-from .utils import Goal, Odom
+from .utils import Goal, Pose
 
 
 GOAL_TOLERANCE = 0.1
 LIN_VEL_SCALE = 0.2
 ANG_VEL_SCALE = 2.0
+
+REDIS_HOST = "localhost"
+REDIS_PORT = "6379"
 
 class Robot(Node):
 
@@ -23,37 +27,42 @@ class Robot(Node):
 
         # publishers
         self.vel_pub = self.create_publisher(
-            Twist, f"/{robot_name}/stretch/cmd_vel", 1)
+            Twist, "/stretch/cmd_vel", 1)
 
         # subscribers
-        self.goal_sub = self.create_subscription(
-            Point, f"/{robot_name}/goal", self.goal_callback, 1)
-        self.odom_sub = self.create_subscription(
-            Odometry, f"/{robot_name}/odom", self.odom_callback, 1)
+        self.pose_sub = self.create_subscription(
+            Odometry, "/odom", self.pose_callback, 1)
         self.scan_sub = self.create_subscription(
-            LaserScan, f"/{robot_name}/scan", self.scan_callback, 1)
+            LaserScan, "/scan", self.scan_callback, 1)
+
+        # redis
+        self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+        self.timer = self.create_timer(0.2, self.redis_get_goal)
+
+        self.goal_key = robot_name + "::goal"
+        self.pose_key = robot_name + "::pose"
 
         # initialize state
-        self.odom = None
+        self.pose = None
         self.goal = None
         self.twist = Twist()
 
     def check_at_goal(self) -> bool:
-        if self.odom is None or self.goal is None:
+        if self.pose is None or self.goal is None:
             return False
-        return (abs(self.odom.x - self.goal.x) < GOAL_TOLERANCE and 
-                abs(self.odom.y - self.goal.y) < GOAL_TOLERANCE)
+        return (abs(self.pose.x - self.goal.x) < GOAL_TOLERANCE and 
+                abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_toward_goal(self):
-        if self.odom is None or self.goal is None: return
+        if self.pose is None or self.goal is None: return
         if self.check_at_goal(): return
 
-        self.print_odometry()
+        self.print_pose()
 
         # unit vector of the heading
-        heading_vec = np.array([np.cos(self.odom.h), np.sin(self.odom.h)])
+        heading_vec = np.array([np.cos(self.pose.h), np.sin(self.pose.h)])
         # vector from the robot to goal
-        goal_vec = np.array([self.goal.x - self.odom.x, self.goal.y - self.odom.y])
+        goal_vec = np.array([self.goal.x - self.pose.x, self.goal.y - self.pose.y])
 
         # cross > 0: goal is to the right of robot
         # cross < 0: goal is to the left of robot
@@ -80,17 +89,12 @@ class Robot(Node):
         # publish twist
         self.vel_pub.publish(self.twist)
 
-    def print_odometry(self):
-        print(f"x: {self.odom.x : 5.2f}    y: {self.odom.y : 5.2f}    heading: {self.odom.h : 5.2f}")
+    def print_pose(self):
+        print(f"x: {self.pose.x : 5.2f}    y: {self.pose.y : 5.2f}    heading: {self.pose.h : 5.2f}")
 
     ### SUBSCRIBER CALLBACKS
 
-    def goal_callback(self, msg: Point):
-        self.goal = Goal(
-            x=msg.x,
-            y=msg.y)
-
-    def odom_callback(self, msg: Odometry):
+    def pose_callback(self, msg: Odometry):
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
 
@@ -101,12 +105,23 @@ class Robot(Node):
             orientation.w])
         euler = quat.as_euler("xyz") # radians
 
-        self.odom = Odom(
+        self.pose = Pose(
             x=position.x,
             y=position.y,
             h=euler[2])
+        self.redis_update_pose()
         
         self.move_toward_goal()
 
     def scan_callback(self, msg: LaserScan):
         pass
+
+    ### REDIS LISTENER
+
+    def redis_get_goal(self):
+        goal_str = self.redis_client.get(self.goal_key)
+        if goal_str:
+            self.goal = Goal.from_string(goal_str)
+
+    def redis_update_pose(self):
+        self.redis_client.set(self.pose_key, str(self.pose))
