@@ -4,6 +4,9 @@ from scipy.spatial.transform import Rotation
 
 import rclpy
 from rclpy.node import Node
+from tf2_ros import TransformException
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
 
 from geometry_msgs.msg import Point, Twist
 from nav_msgs.msg import Odometry
@@ -32,14 +35,12 @@ class Robot(Node):
             Twist, "/stretch/cmd_vel", 1)
 
         # subscribers
-        self.pose_sub = self.create_subscription(
-            Odometry, "/odom", self.pose_callback, 1)
         self.scan_sub = self.create_subscription(
             LaserScan, "/scan", self.scan_callback, 1)
 
         # redis
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
-        self.timer = self.create_timer(0.2, self.redis_get_goal)
+        self.goal_timer = self.create_timer(0.2, self.redis_get_goal)
 
         self.goal_key = robot_name + "::goal"
         self.pose_key = robot_name + "::pose"
@@ -49,11 +50,58 @@ class Robot(Node):
         self.goal = None
         self.twist = Twist()
 
+        # tf
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        self.tf_timer = self.create_timer(0.01, self.extract_pose)
+        self.extract_pose()
+
         # clear old goal
         self.redis_update_pose()
         self.redis_client.set(self.goal_key, str(Goal(x=0.0, y=0.0)))
-
+  
         self.obstacle_present = False
+
+    ### POSE METHODS
+
+    def print_pose(self):
+        print(f"x: {self.pose.x : 5.2f}    y: {self.pose.y : 5.2f}    heading: {self.pose.h : 5.2f}")
+
+    def extract_pose(self):
+        to_frame = "map"
+        from_frame = "base_link"
+
+        try:
+            t = self.tf_buffer.lookup_transform(
+                    to_frame,
+                    from_frame,
+                    rclpy.time.Time())
+            # print(t)
+        except TransformException as ex:
+            self.get_logger().info(
+                f"Could not transform {to_frame} to {from_frame}: {ex}")
+            return
+
+        position = t.transform.translation
+        orientation = t.transform.rotation
+
+        quat = Rotation.from_quat([
+            orientation.x,
+            orientation.y,
+            orientation.z,
+            orientation.w])
+        euler = quat.as_euler("xyz") # radians
+
+        self.pose = Pose(
+            x=position.x,
+            y=position.y,
+            h=float(euler[2]))
+
+        self.redis_update_pose()
+        self.move_toward_goal()
+         self.print_pose()
+
+    ### GOAL METHODS
 
     def check_at_goal(self) -> bool:
         if self.pose is None or self.goal is None:
@@ -65,8 +113,6 @@ class Robot(Node):
         if self.pose is None or self.goal is None: return
         if self.check_at_goal(): return
         if self.obstacle_present: return
-
-        self.print_pose()
 
         # unit vector of the heading
         heading_vec = np.array([np.cos(self.pose.h), np.sin(self.pose.h)])
@@ -98,29 +144,7 @@ class Robot(Node):
         # publish twist
         self.vel_pub.publish(self.twist)
 
-    def print_pose(self):
-        print(f"x: {self.pose.x : 5.2f}    y: {self.pose.y : 5.2f}    heading: {self.pose.h : 5.2f}")
-
     ### SUBSCRIBER CALLBACKS
-
-    def pose_callback(self, msg: Odometry):
-        position = msg.pose.pose.position
-        orientation = msg.pose.pose.orientation
-
-        quat = Rotation.from_quat([
-            orientation.x,
-            orientation.y,
-            orientation.z,
-            orientation.w])
-        euler = quat.as_euler("xyz") # radians
-
-        self.pose = Pose(
-            x=position.x,
-            y=position.y,
-            h=float(euler[2]))
-        self.redis_update_pose()
-        
-        self.move_toward_goal()
 
     def scan_callback(self, msg: LaserScan):
         angles = np.linspace(msg.angle_min, msg.angle_max, len(msg.ranges))
