@@ -1,7 +1,7 @@
 import argparse
 import time
 
-from flocking.ros2 import Director
+from flocking.bridge import Director
 
 
 def main(args=None, robots=(1,)):

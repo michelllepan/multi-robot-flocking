@@ -1,9 +1,6 @@
-from functools import partial
-
 import redis
 
-from .robot import Robot
-from .utils import Goal, Pose
+from flocking.utils import Goal, Pose
 
 GOAL_TOLERANCE = 0.1
 
@@ -29,16 +26,16 @@ class Director:
             self.pose_keys[r] = "robot_" + str(r) + "::pose"
 
         self.goals = [
-            Goal(x=0.0, y=1.0),
-            Goal(x=1.0, y=1.0),
+            Goal(x=0.0, y=0.0),
             Goal(x=1.0, y=0.0),
-            Goal(x=0.0, y=0.0)
         ]
         self.i = 0
 
     def step_flocking(self):
         for r in self.robots:
             pose_string = self.redis_client.get(self.pose_keys[r])
+            if not pose_string: continue
+
             pose = Pose.from_string(pose_string)
             if self.i >= len(self.goals): return
 

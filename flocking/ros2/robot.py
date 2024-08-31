@@ -12,7 +12,7 @@ from geometry_msgs.msg import Point, Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import BatteryState, LaserScan
 
-from .utils import Goal, Pose
+from flocking.utils import Goal, Pose
 
 
 GOAL_TOLERANCE = 0.1
@@ -99,7 +99,7 @@ class Robot(Node):
 
         self.redis_update_pose()
         self.move_toward_goal()
-         self.print_pose()
+        self.print_pose()
 
     ### GOAL METHODS
 

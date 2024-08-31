@@ -8,7 +8,7 @@ import redis
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 
-from flocking.ros2.utils import Goal, Pose
+from flocking.utils import Goal, Pose
 
 REDIS_HOST = "localhost"
 REDIS_PORT = "6379"
