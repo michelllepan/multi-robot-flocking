@@ -18,10 +18,12 @@ from flocking.utils import Goal, Pose
 GOAL_TOLERANCE = 0.1
 OBS_TOLERANCE = 0.5
 
-LIN_VEL_SCALE = 0.5
-ANG_VEL_SCALE = 1.5
+LIN_VEL_SCALE = 1.0
+ANG_VEL_SCALE = 1.0
 
-REDIS_HOST = "localhost"
+# MAX_ANG_SPEED = 1.0 
+
+REDIS_HOST = "10.5.90.8"
 REDIS_PORT = "6379"
 
 class Robot(Node):
@@ -40,7 +42,7 @@ class Robot(Node):
 
         # redis
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
-        self.goal_timer = self.create_timer(0.2, self.redis_get_goal)
+        self.goal_timer = self.create_timer(0.1, self.redis_get_goal)
 
         self.goal_key = robot_name + "::goal"
         self.pose_key = robot_name + "::pose"
@@ -53,7 +55,7 @@ class Robot(Node):
         # tf
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.tf_timer = self.create_timer(0.01, self.extract_pose)
+        self.tf_timer = self.create_timer(0.001, self.extract_pose)
         self.extract_pose()
 
         # clear old goal
@@ -65,7 +67,7 @@ class Robot(Node):
     ### POSE METHODS
 
     def print_pose(self):
-        print(f"x: {self.pose.x : 5.2f}    y: {self.pose.y : 5.2f}    heading: {self.pose.h : 5.2f}")
+        print(f"x: {self.pose.x : 5.2f}    y: {self.pose.y : 5.2f}    heading: {self.pose.h : 5.2f}     lin vel: {self.twist.linear.x : 5.2f}    ang vel: {self.twist.angular.z : 5.2f}")
 
     def extract_pose(self):
         to_frame = "map"
@@ -112,7 +114,11 @@ class Robot(Node):
     def move_toward_goal(self):
         if self.pose is None or self.goal is None: return
         if self.check_at_goal(): return
-        if self.obstacle_present: return
+        if self.obstacle_present:
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = 0.0
+            self.vel_pub.publish(self.twist)
+            return 
 
         # unit vector of the heading
         heading_vec = np.array([np.cos(self.pose.h), np.sin(self.pose.h)])
@@ -134,15 +140,20 @@ class Robot(Node):
             self.twist.linear.x = 0.0
 
         # calculate angular velocity
+        angular_speed = ANG_VEL_SCALE * theta
+        if self.twist.linear.x == 0.0:
+            angular_speed = min(angular_speed, 0.5)
         if cross > 0.01:
-            self.twist.angular.z = -ANG_VEL_SCALE * theta
+            self.twist.angular.z = -angular_speed
         elif cross < -0.01:
-            self.twist.angular.z = ANG_VEL_SCALE * theta
+            self.twist.angular.z = angular_speed
         else:
             self.twist.angular.z = 0.0
 
         # publish twist
         self.vel_pub.publish(self.twist)
+        print("publishing")
+        print(self.twist)
 
     ### SUBSCRIBER CALLBACKS
 
@@ -157,6 +168,9 @@ class Robot(Node):
 
         # If closest measured scan is within obstacle threshold, stop
         self.obstacle_present = min(new_ranges) < OBS_TOLERANCE
+
+        if self.obstacle_present:
+            print("obstacle detected")
 
     ### REDIS LISTENER
 
