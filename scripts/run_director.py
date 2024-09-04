@@ -1,11 +1,11 @@
 import argparse
 import time
 
-from flocking.bridge import Director
+from flocking.director import FlockPlanner
 
 
 def main(args=None, robots=(1,)):
-    director = Director(robots=robots)
+    director = FlockPlanner(robots=robots)
     while True:
         director.step_flocking()
         time.sleep(0.1)

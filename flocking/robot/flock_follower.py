@@ -26,7 +26,7 @@ ANG_VEL_SCALE = 1.0
 REDIS_HOST = "10.5.90.8"
 REDIS_PORT = "6379"
 
-class Robot(Node):
+class FlockFollower(Node):
 
     def __init__(self, robot_id):
         robot_name = "robot_" + str(robot_id)

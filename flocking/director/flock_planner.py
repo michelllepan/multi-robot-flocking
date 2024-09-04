@@ -10,7 +10,7 @@ REDIS_HOST = "localhost"
 REDIS_PORT = "6379"
 
 
-class Director:
+class FlockPlanner:
 
     def __init__(self, robots=(1,)):
         super().__init__()

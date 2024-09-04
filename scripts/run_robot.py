@@ -2,12 +2,12 @@ import os
 
 import rclpy
 
-from flocking.ros2 import Robot
+from flocking.robot import FlockFollower
 
 
 def main(args=None, robot_id=1):
     rclpy.init(args=args)
-    robot = Robot(robot_id)
+    robot = FlockFollower(robot_id)
     rclpy.spin(robot)
     robot.destroy_node()
     rclpy.shutdown()
