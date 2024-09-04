@@ -18,7 +18,7 @@ from flocking.utils import Goal, Pose
 GOAL_TOLERANCE = 0.1
 OBS_TOLERANCE = 0.5
 
-LIN_VEL_SCALE = 1.0
+LIN_VEL_SCALE = 0.5
 ANG_VEL_SCALE = 1.0
 
 # MAX_ANG_SPEED = 1.0 
@@ -135,7 +135,7 @@ class Robot(Node):
 
         # calculate linear velocity
         if theta < np.pi / 2:
-            self.twist.linear.x = np.tanh(LIN_VEL_SCALE * np.linalg.norm(goal_vec))
+            self.twist.linear.x = min(np.tanh(LIN_VEL_SCALE * np.linalg.norm(goal_vec)), 0.3)
         else:
             self.twist.linear.x = 0.0
 
@@ -143,6 +143,8 @@ class Robot(Node):
         angular_speed = ANG_VEL_SCALE * theta
         if self.twist.linear.x == 0.0:
             angular_speed = min(angular_speed, 0.5)
+        else:
+            angular_speed = min(angular_speed, 1.0)
         if cross > 0.01:
             self.twist.angular.z = -angular_speed
         elif cross < -0.01:
@@ -152,8 +154,8 @@ class Robot(Node):
 
         # publish twist
         self.vel_pub.publish(self.twist)
-        print("publishing")
-        print(self.twist)
+        # print("publishing")
+        # print(self.twist)
 
     ### SUBSCRIBER CALLBACKS
 
