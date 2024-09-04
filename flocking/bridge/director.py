@@ -35,7 +35,7 @@ class Director:
         self.boids_runner = BoidsRunner(
             num_robots=len(robots),
             robot_start_positions=robot_starts,
-            step_scale=0.05,
+            step_scale=0.1,
             canvas_dims=(4,4))
 
     def step_flocking(self):
@@ -45,7 +45,7 @@ class Director:
         self.boids_runner.move_robots(robot_positions)
 
         # update targets
-        self.boids_runner.update_targets(mode="CIRCLE")
+        self.boids_runner.update_targets(steps=20, mode="LINEAR_TRACKS")
         print(self.boids_runner.target_positions)
         for i in range(len(self.robots)):
             r = self.robots[i]
@@ -59,8 +59,11 @@ class Director:
             if not pose_string: continue
 
             pose = Pose.from_string(pose_string)
+            if pose is None: continue
+            self.poses[r] = pose
 
-            self.redis_client.set(self.goal_keys[r], str(goal))
+            if r not in self.goals: continue
+            self.redis_client.set(self.goal_keys[r], str(self.goals[r]))
 
             # without robots
             # if r in self.goals:

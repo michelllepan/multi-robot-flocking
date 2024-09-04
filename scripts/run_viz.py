@@ -41,13 +41,13 @@ class BoidsPlotter:
     def update(self):
         for r in self.robots:
             pose_string = self.redis_client.get(self.pose_keys[r])
-            if pose_string:
-                pose = Pose.from_string(pose_string)
+            pose = Pose.from_string(pose_string)
+            if pose is not None:
                 self.poses[r] = pose
 
             goal_string = self.redis_client.get(self.goal_keys[r])
-            if goal_string:
-                goal = Goal.from_string(goal_string)
+            goal = Goal.from_string(goal_string)
+            if goal is not None:
                 self.goals[r] = goal
 
     @property
