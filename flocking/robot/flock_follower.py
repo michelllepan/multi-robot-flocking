@@ -63,7 +63,7 @@ class FlockFollower(Node):
         self.goal = Goal.from_string(goal_str)
 
         obstacle_str = self.redis_client.get(self.obstacles_key)
-        self.obstacle_present = obstacle_str == "True"
+        self.obstacle_present = eval(obstacle_str)
 
         self.print_info()
 
@@ -83,6 +83,7 @@ class FlockFollower(Node):
             self.twist.linear.x = 0.0
             self.twist.angular.z = 0.0
             self.vel_pub.publish(self.twist)
+            print("OBSTACLE PRESENT: STOPPING !!!!1!!11!111!!!!!!!!!")
             return 
 
         # unit vector of the heading
