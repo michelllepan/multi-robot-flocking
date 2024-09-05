@@ -48,7 +48,6 @@ class MediaPipeDetector:
         if not detection_result.pose_landmarks:
             return []
         
-        print(f"{len(detection_result.pose_landmarks)} human(s) detected")
         pose_landmarks = detection_result.pose_landmarks[0]
 
         def landmark_to_vec(landmark):

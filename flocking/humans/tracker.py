@@ -9,8 +9,8 @@ import numpy as np
 import redis
 import scipy
 
-from camera import RealSenseCamera
-from detector import MediaPipeDetector
+from .camera import RealSenseCamera
+from .detector import MediaPipeDetector
 
 
 REDIS_POS_KEY = "sai2::realsense::"
