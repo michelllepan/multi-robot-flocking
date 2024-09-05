@@ -31,3 +31,19 @@ class Goal:
         goal_list = eval(goal_string)
         if goal_list is None: return None
         return cls(x=goal_list[0], y=goal_list[1])
+
+
+class Humans:
+
+    def __init__(self, coords: list):
+        super().__init__()
+        self.coords = coords
+
+    def __str__(self):
+        return str(self.coords)
+
+    @classmethod
+    def from_string(cls, human_string: str):
+        human_list = eval(human_string)
+        if human_list is None: return None
+        return cls(coords=human_list)

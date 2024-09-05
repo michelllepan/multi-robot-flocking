@@ -1,14 +1,18 @@
 import numpy as np
 import redis
 
+from .human_filter import HumanFilter
 from flocking.boids import BoidsRunner
-from flocking.utils import Goal, Pose
+from flocking.utils import Goal, Pose, Humans
 
 GOAL_TOLERANCE = 0.1
 
 REDIS_HOST = "localhost"
+# REDIS_HOST = "10.5.90.8"
 REDIS_PORT = "6379"
 
+X_MAX = 4
+Y_MAX = 4
 
 class FlockPlanner:
 
@@ -18,17 +22,21 @@ class FlockPlanner:
 
         # redis setup
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
-        self.goal_keys = {}
-        self.pose_keys = {}
+        self.redis_keys = {}
 
         for r in self.robots:
-            self.goal_keys[r] = "robot_" + str(r) + "::goal"
-            self.pose_keys[r] = "robot_" + str(r) + "::pose"
+            self.redis_keys[r] = {}
+            self.redis_keys[r]["goal"] = "robot_" + str(r) + "::goal"
+            self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
+            self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
+
+        self.filtered_human_key = "filtered_human"
 
         # populate data
         self.goals = {}
         self.poses = {}
-        self.sync_redis()
+        self.humans = {}
+        self.read_redis()
 
         # Boids setup
         robot_starts = np.array([[self.poses[r].x, self.poses[r].y] for r in self.robots])
@@ -36,45 +44,56 @@ class FlockPlanner:
             num_robots=len(robots),
             robot_start_positions=robot_starts,
             step_scale=0.1,
-            canvas_dims=(4,4))
+            canvas_dims=(X_MAX, Y_MAX))
+
+        # human setup
+        self.human_filter = HumanFilter(x_min=-1, x_max=X_MAX, y_min=-1, y_max=Y_MAX)
+        self.human = None
 
     def step_flocking(self):
-        # update robot positions
-        self.sync_redis()
+        self.read_redis()
+
         robot_positions = np.array([[self.poses[r].x, self.poses[r].y] for r in self.robots])
         self.boids_runner.move_robots(robot_positions)
 
+        human_candidates = [h for humans in self.humans.values() for h in humans.coords]
+        if human_candidates:
+            self.human = self.human_filter.apply(human_candidates, 1)
+            if self.human:
+                print("moving human to", np.array(self.human))
+                self.boids_runner.move_human(np.array(self.human)[0])
+        else:
+            print("no human candidates")
+            self.human = None
+
         # update targets
         self.boids_runner.update_targets(steps=20, mode="LINEAR_TRACKS")
-        print(self.boids_runner.target_positions)
         for i in range(len(self.robots)):
             r = self.robots[i]
             t = self.boids_runner.target_positions[i]
             self.goals[r] = Goal(x=float(t[0]), y=float(t[1]))
 
-        
-    def sync_redis(self):
+        self.write_redis()
+
+    def read_redis(self):
         for r in self.robots:
-            pose_string = self.redis_client.get(self.pose_keys[r])
+            pose_string = self.redis_client.get(self.redis_keys[r]["pose"])
             if not pose_string: continue
 
             pose = Pose.from_string(pose_string)
             if pose is None: continue
             self.poses[r] = pose
 
+            human_string = self.redis_client.get(self.redis_keys[r]["humans"])
+            if not human_string: continue
+
+            humans = Humans.from_string(human_string)
+            if humans is None: continue
+            self.humans[r] = humans
+
+    def write_redis(self):
+        for r in self.robots:
             if r not in self.goals: continue
-            self.redis_client.set(self.goal_keys[r], str(self.goals[r]))
+            self.redis_client.set(self.redis_keys[r]["goal"], str(self.goals[r]))
 
-            # without robots
-            # if r in self.goals:
-            #     goal = self.goals[r]
-            # else:
-            #     goal = Goal(x=float(r), y=0.0)
-
-            # self.goals[r] = goal
-            # self.redis_client.set(self.goal_keys[r], str(goal))
-
-            # pose = Pose(x=float(goal.x), y=float(goal.y), h=0.0)
-
-            # self.poses[r] = goal
-            # self.redis_client.set(self.pose_keys[r], str(pose))
+        self.redis_client.set(self.filtered_human_key, str(self.human))

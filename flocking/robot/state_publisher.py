@@ -25,6 +25,7 @@ class StatePublisher(Node):
         super().__init__("state_publisher")
 
         robot_name = "robot_" + str(robot_id)
+        print("creating state publisher")
 
         # redis
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
@@ -49,7 +50,9 @@ class StatePublisher(Node):
 
         # humans
         self.human_tracker = HumanTracker()
-        self.human_timer = self.create_timer(0.5, self.publish_humans)
+        self.human_timer = self.create_timer(0.1, self.publish_humans)
+
+        print("created state publisher")
 
     def publish_pose(self):
         to_frame, from_frame = "map", "base_link"
@@ -98,10 +101,18 @@ class StatePublisher(Node):
 
     def publish_humans(self):
         if self.pose is None:
+            print("no pose")
             return
 
+        print("processing frame")
         detections_robot = self.human_tracker.process_frame()
+        if not detections_robot:
+            print("no detections")
+            return
+
         detections_robot = np.array(detections_robot)
+        if detections_robot.ndim < 2:
+            detections_robot = np.expand_dims(detections_robot, axis=0)
 
         # add z coordinate for rotation
         z = np.zeros((detections_robot.shape[0], 1))
@@ -116,4 +127,5 @@ class StatePublisher(Node):
         detections_world += np.array([self.pose.x, self.pose.y])
 
         detections_world = detections_world.tolist()
+        print(detections_world)
         self.redis_client.set(self.humans_key, str(detections_world))
