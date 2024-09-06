@@ -60,14 +60,14 @@ class FlockPlanner:
         if human_candidates:
             self.human = self.human_filter.apply(human_candidates, 1)
             if self.human:
-                print("moving human to", np.array(self.human))
-                self.boids_runner.move_human(np.array(self.human)[0])
+                human_array = np.array(self.human).reshape((2,))
+                self.boids_runner.move_human(human_array)
         else:
             print("no human candidates")
             self.human = None
 
         # update targets
-        self.boids_runner.update_targets(steps=20, mode="LINEAR_TRACKS")
+        self.boids_runner.update_targets(steps=20, mode="FOLLOW")
         for i in range(len(self.robots)):
             r = self.robots[i]
             t = self.boids_runner.target_positions[i]
