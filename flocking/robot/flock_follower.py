@@ -21,7 +21,7 @@ OBS_TOLERANCE = 0.5
 LIN_VEL_SCALE = 0.5
 LIN_VEL_MAX = 0.3
 
-ANG_VEL_SCALE = 1.0
+ANG_VEL_SCALE = 0.8
 ANG_VEL_MAX = 1.0
 
 REDIS_HOST = "10.5.90.8"
@@ -100,13 +100,14 @@ class FlockFollower(Node):
                           (np.linalg.norm(heading_vec) * np.linalg.norm(goal_vec)))
 
         # calculate linear velocity
+        linear_speed = np.tanh(LIN_VEL_SCALE * np.linalg.norm(goal_vec))
         if theta < np.pi / 2:
-            self.twist.linear.x = min(np.tanh(LIN_VEL_SCALE * np.linalg.norm(goal_vec)), 0.3)
+            self.twist.linear.x = min(linear_speed, 0.3)
         else:
             self.twist.linear.x = 0.0
 
         # calculate angular velocity
-        angular_speed = ANG_VEL_SCALE * theta
+        angular_speed = np.tanh(ANG_VEL_SCALE * theta)
         if self.twist.linear.x == 0.0:
             angular_speed = min(angular_speed, 0.5)
         else:
