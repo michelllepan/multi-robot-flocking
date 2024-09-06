@@ -25,7 +25,7 @@ class StatePublisher(Node):
         super().__init__("state_publisher")
 
         robot_name = "robot_" + str(robot_id)
-        print("creating state publisher")
+        self.get_logger().info("creating state publisher")
 
         # redis
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
@@ -49,10 +49,11 @@ class StatePublisher(Node):
             LaserScan, "/scan", self.publish_obstacles, 1)
 
         # humans
-        self.human_tracker = HumanTracker()
-        self.human_timer = self.create_timer(0.1, self.publish_humans)
+        human_callback = lambda humans: self.publish_humans(humans)
+        self.human_tracker = HumanTracker(human_callback=human_callback)
+        self.human_timer = self.create_timer(0.1, self.human_tracker.process_frame)
 
-        print("created state publisher")
+        self.get_logger().info("created state publisher")
 
     def publish_pose(self):
         to_frame, from_frame = "map", "base_link"
@@ -99,15 +100,8 @@ class StatePublisher(Node):
         obstacle_present = min(new_ranges) < 0.5
         self.redis_client.set(self.obstacles_key, str(obstacle_present))
 
-    def publish_humans(self):
-        if self.pose is None:
-            print("no pose")
-            return
-
-        print("processing frame")
-        detections_robot = self.human_tracker.process_frame()
-        if not detections_robot:
-            print("no detections")
+    def publish_humans(self, detections_robot):
+        if self.pose is None or not detections_robot:
             return
 
         detections_robot = np.array(detections_robot)
@@ -127,5 +121,4 @@ class StatePublisher(Node):
         detections_world += np.array([self.pose.x, self.pose.y])
 
         detections_world = detections_world.tolist()
-        print(detections_world)
         self.redis_client.set(self.humans_key, str(detections_world))

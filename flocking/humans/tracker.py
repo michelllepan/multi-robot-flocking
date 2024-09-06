@@ -10,49 +10,33 @@ import redis
 import scipy
 
 from .camera import RealSenseCamera
-from .detector import MediaPipeDetector
+from .detector import MediaPipeDetector, draw_landmarks_on_image, parse_landmarks
 
 
 REDIS_POS_KEY = "sai2::realsense::"
 STREAMING_POINTS = ["center_shoulder"]
 EMA_BETA = 0.9
 
+
+def get_depth_at_pixel(depth_image, x, y):
+    height, width = depth_image.shape
+    x, y = int(x * width), int(y * height)
+    if x < 0 or x >= width or y < 0 or y >= height:
+        return None
+    else:
+        return 1e-3 * depth_image[y, x]
+
 class HumanTracker:
 
-    def __init__(self, show_frames: bool = False):
+    def __init__(self, human_callback, show_frames: bool = False):
         self.camera = RealSenseCamera()
-        self.detector = MediaPipeDetector()
+        self.detector = MediaPipeDetector(result_callback=self.detector_callback)
+
+        self.human_callback = human_callback
         self.show_frames = show_frames
+
+        self.image_history = {}
         
-        # # initialize history
-        # self.history = {}
-        # self.history_length = history_length
-        # for key in STREAMING_POINTS:
-        #     self.history[key] = np.empty((history_length, 3))
-        #     self.history[key][:] = np.nan
-
-    # def smooth_values(self, key, new_value):
-    #     # update history
-    #     self.history[key] = np.concatenate((
-    #         self.history[key][1:],
-    #         np.array(new_value).reshape((1, 3))
-    #     ))
-
-    #     # create weights
-    #     weights = (1 - EMA_BETA) * np.power(EMA_BETA, np.arange(self.history_length))
-
-    #     # redistribute weights if values are nan
-    #     for i in range(self.history_length):
-    #         if np.isnan(self.history[key][i]).any():
-    #             weights[i] = 0
-    #     if sum(weights) == 0:
-    #         return None
-    #     weights = weights / sum(weights)
-
-    #     # calculate smoothed values
-    #     smoothed_values = np.dot(weights.T, np.nan_to_num(self.history[key]))
-    #     return smoothed_values
-
     def process_frame(self):
         depth_frame, color_frame = self.camera.get_frames()
 
@@ -73,7 +57,6 @@ class HumanTracker:
             cv2.convertScaleAbs(depth_image, alpha=0.03),cv2.COLORMAP_JET)
         
         depth_colormap_dim = depth_colormap.shape
-        height, width, _ = depth_colormap_dim
         color_colormap_dim = color_image.shape
 
         if depth_colormap_dim != color_colormap_dim:
@@ -82,37 +65,37 @@ class HumanTracker:
                 dsize=(depth_colormap_dim[1], depth_colormap_dim[0]),
                 interpolation=cv2.INTER_AREA)
 
-        detection_result = self.detector.run_detection(color_image)
-        color_image = self.detector.draw_landmarks_on_image(color_image, detection_result)
-        depth_colormap = self.detector.draw_landmarks_on_image(depth_colormap, detection_result)
-        images = np.hstack((color_image, depth_colormap))
+        timestamp = int(1000 * time.time())
+        self.detector.run_detection(color_image, timestamp)
+        self.image_history[timestamp] = (color_image, depth_image)
+        
+    def detector_callback(self, detection_result, output_image, timestamp):
+        color_image, depth_image = self.image_history.pop(timestamp)
+        height, width = depth_image.shape
+        # depth_colormap = cv2.applyColorMap(
+        #     cv2.convertScaleAbs(depth_image, alpha=0.03),cv2.COLORMAP_JET)
 
-        if self.show_frames:
-            cv2.imshow("RealSense", images)
+        # color_image = draw_landmarks_on_image(color_image, detection_result)
+        # depth_colormap = draw_landmarks_on_image(depth_colormap, detection_result)
+        # images = np.hstack((color_image, depth_colormap))
 
-        landmark_dicts = self.detector.parse_landmarks(detection_result)
+        # if self.show_frames:
+        #     cv2.imshow("RealSense", images)
 
-        def get_depth_at_pixel(x, y):
-            x, y = int(x * width), int(y * height)
-            if x < 0 or x >= width or y < 0 or y >= height:
-                return None
-            else:
-                return 1e-3 * depth_image[y, x]
+        landmark_dicts = parse_landmarks(detection_result)
 
-        people = []
+        humans = []
         for landmark_dict in landmark_dicts:
             coords = landmark_dict["center_shoulder"]
-            depth = get_depth_at_pixel(coords[0], coords[1])
+            depth = get_depth_at_pixel(depth_image, coords[0], coords[1])
             if depth is None:
                 continue
 
             x = depth
             y = width * (0.5 - coords[0]) * (depth / 640)
-            people.append([x, y])
+            humans.append([x, y])
 
-            # print(f"x: {x : 5.2f}   y: {y : 5.2f}")
-
-        return people
+        self.human_callback(humans)
 
 
 if __name__ == "__main__":
