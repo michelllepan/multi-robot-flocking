@@ -20,8 +20,8 @@ class MediaPipeDetector:
             running_mode=vision.RunningMode.LIVE_STREAM,
             result_callback=result_callback,
             num_poses=2,
-            min_pose_detection_confidence=0.7,
-            min_pose_presence_confidence=0.7)
+            min_pose_detection_confidence=0.8,
+            min_pose_presence_confidence=0.8)
         self.detector = vision.PoseLandmarker.create_from_options(options)
 
     def run_detection(self, image, timestamp):
