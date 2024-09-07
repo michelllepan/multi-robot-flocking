@@ -44,12 +44,14 @@ class FlockFollower(Node):
 
         self.goal_key = robot_name + "::goal"
         self.pose_key = robot_name + "::pose"
-        self.obstacles_key = robot_name + "::obstacles"
+        self.obstacles_front_key = robot_name + "::obstacles::front"
+        self.obstacles_back_key = robot_name + "::obstacles::back"
 
         # initialize state
         self.pose = None
         self.goal = None
-        self.obstacle_present = False
+        self.obstacle_present_front = False
+        self.obstacle_present_back = False
 
         # movement
         self.move_timer = self.create_timer(0.01, self.move_toward_goal)
@@ -62,8 +64,11 @@ class FlockFollower(Node):
         goal_str = self.redis_client.get(self.goal_key)
         self.goal = Goal.from_string(goal_str)
 
-        obstacle_str = self.redis_client.get(self.obstacles_key)
-        self.obstacle_present = eval(obstacle_str)
+        obstacle_str = self.redis_client.get(self.obstacles_front_key)
+        self.obstacle_present_front = eval(obstacle_str)
+
+        obstacle_str = self.redis_client.get(self.obstacles_back_key)
+        self.obstacle_present_back = eval(obstacle_str)
 
         self.print_info()
 
@@ -78,13 +83,19 @@ class FlockFollower(Node):
 
     def move_toward_goal(self):
         if self.pose is None or self.goal is None: return
-        if self.check_at_goal(): return
-        if self.obstacle_present:
-            self.twist.linear.x = 0.0
-            self.twist.angular.z = 0.0
-            self.vel_pub.publish(self.twist)
-            print("OBSTACLE PRESENT: STOPPING !!!!1!!11!111!!!!!!!!!")
+        if self.obstacle_present_front:
+            if self.obstacle_present_back:
+                self.twist.linear.x = 0.0
+                self.twist.angular.z = 0.0
+                self.vel_pub.publish(self.twist)
+                print("ROBOT BLOCKED: STOPPING !!!!1!!11!111!!!!!!!!!")
+            else:
+                self.twist.linear.x = -0.5
+                self.twist.angular.z = 0.0
+                self.vel_pub.publish(self.twist)
+                print("BACKING UP")
             return 
+        if self.check_at_goal(): return
 
         # unit vector of the heading
         heading_vec = np.array([np.cos(self.pose.h), np.sin(self.pose.h)])

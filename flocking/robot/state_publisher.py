@@ -31,7 +31,8 @@ class StatePublisher(Node):
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         self.pose_key = robot_name + "::pose"
         self.battery_key = robot_name + "::battery"
-        self.obstacles_key = robot_name + "::obstacles"
+        self.obstacles_front_key = robot_name + "::obstacles::front"
+        self.obstacles_back_key = robot_name + "::obstacles::back"
         self.humans_key = robot_name + "::humans"
 
         # pose
@@ -98,7 +99,13 @@ class StatePublisher(Node):
 
         # If closest measured scan is within obstacle threshold, stop
         obstacle_present = min(new_ranges) < 0.5
-        self.redis_client.set(self.obstacles_key, str(obstacle_present))
+        self.redis_client.set(self.obstacles_front_key, str(obstacle_present))
+
+        # do the same but for the back
+        points = [r * np.sin(theta) if (theta < 0.5 and theta > -0.5) else np.inf for r,theta in zip(msg.ranges, angles)]
+        new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
+        obstacle_present = min(new_ranges) < 0.5
+        self.redis_client.set(self.obstacles_back_key, str(obstacle_present))
 
     def publish_humans(self, detections_robot):
         if self.pose is None or not detections_robot:
