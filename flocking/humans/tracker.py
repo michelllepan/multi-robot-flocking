@@ -70,12 +70,15 @@ class HumanTracker:
         self.image_history[timestamp] = (color_image, depth_image)
         
     def detector_callback(self, detection_result, output_image, timestamp):
+        if timestamp not in self.image_history: 
+            return
+
         color_image, depth_image = self.image_history.pop(timestamp)
         height, width = depth_image.shape
         # depth_colormap = cv2.applyColorMap(
         #     cv2.convertScaleAbs(depth_image, alpha=0.03),cv2.COLORMAP_JET)
 
-        # color_image = draw_landmarks_on_image(color_image, detection_result)
+        color_image = draw_landmarks_on_image(color_image, detection_result)
         # depth_colormap = draw_landmarks_on_image(depth_colormap, detection_result)
         # images = np.hstack((color_image, depth_colormap))
 
@@ -95,7 +98,7 @@ class HumanTracker:
             y = width * (0.5 - coords[0]) * (depth / 640)
             humans.append([x, y])
 
-        self.human_callback(humans)
+        self.human_callback(humans, color_image)
 
 
 if __name__ == "__main__":

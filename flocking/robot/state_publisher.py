@@ -1,16 +1,17 @@
 import os
+from io import BytesIO
 
 import numpy as np
 import redis
+from PIL import Image
 from scipy.spatial.transform import Rotation
 
 import rclpy
 from rclpy.node import Node
+from sensor_msgs.msg import BatteryState, LaserScan
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
-
-from sensor_msgs.msg import BatteryState, LaserScan
 
 from flocking.humans import HumanTracker
 from flocking.utils import Pose
@@ -34,6 +35,7 @@ class StatePublisher(Node):
         self.obstacles_front_key = robot_name + "::obstacles::front"
         self.obstacles_back_key = robot_name + "::obstacles::back"
         self.humans_key = robot_name + "::humans"
+        self.image_key = robot_name + "::image" 
 
         # pose
         self.tf_buffer = Buffer()
@@ -50,7 +52,10 @@ class StatePublisher(Node):
             LaserScan, "/scan", self.publish_obstacles, 1)
 
         # humans
-        human_callback = lambda humans: self.publish_humans(humans)
+        def human_callback(humans, image):
+            self.publish_humans(humans)
+            self.publish_image(image)
+
         self.human_tracker = HumanTracker(human_callback=human_callback)
         self.human_timer = self.create_timer(0.1, self.human_tracker.process_frame)
 
@@ -129,3 +134,12 @@ class StatePublisher(Node):
 
         detections_world = detections_world.tolist()
         self.redis_client.set(self.humans_key, str(detections_world))
+
+    def publish_image(self, image):
+        output = BytesIO()
+        image = image[:,:,::-1] # switch order of color channels
+        image = Image.fromarray(image.astype("uint8"), "RGB")
+        image.save(output, format="png")
+
+        self.redis_client.set(self.image_key, output.getvalue())
+        output.close()
