@@ -1,6 +1,7 @@
 import argparse
 from functools import partial
 
+import cv2
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,12 +31,13 @@ class Visualizer:
 
         self.goals = {}
         self.poses = {}
-        self.human = None
+        self.filtered_human = None
 
         for r in self.robots:
             self.redis_keys[r] = {}
             self.redis_keys[r]["goal"] = "robot_" + str(r) + "::goal"
             self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
+            self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
 
             self.goals[r] = Goal(x=-1.0, y=-1.0)
             self.poses[r] = Pose(x=-1.0, y=-1.0, h=0.0)
@@ -56,7 +58,7 @@ class Visualizer:
 
         human_string = self.redis_client.get(self.filtered_human_key)
         if human_string:
-            self.human = eval(human_string)
+            self.filtered_human = eval(human_string)
 
     @property
     def robot_positions(self):
@@ -69,59 +71,58 @@ class Visualizer:
         return np.array([
             [self.goals[r].x, self.goals[r].y]
             for r in self.robots ])
+    
+    @property
+    def human_candidate_positions(self):
+        return np.array([
+            [self.goals[r].x, self.goals[r].y]
+            for r in self.robots ])
 
     @property
-    def human_position(self):
-        if not self.human:
+    def filtered_human_position(self):
+        if not self.filtered_human:
             return np.array([-1, -1])
-        return np.array(self.human)
+        return np.array(self.filtered_human)
 
     def show_plot(self):
-        fig, ax = plt.subplots()
+        while True:
+            fig, ax = plt.subplots()
+            self.read_redis()
 
-        scats = []
-        for i in range(self.num_robots):
-            r = self.robots[i]
-            scats.append(ax.scatter(
-                x=self.robot_positions[i][0],
-                y=self.robot_positions[i][1],
-                c=ROBOT_COLOR,
-                marker=f"${r}$"))
-            scats.append(ax.scatter(
-                x=self.goal_positions[i][0],
-                y=self.goal_positions[i][1],
-                c=GOAL_COLOR,
-                marker=f"${r}$"))
-        scats.append(ax.scatter(
-            x=self.human_position[0],
-            y=self.human_position[1],
-            c=HUMAN_COLOR,
-            marker="H"))
-        
-        ax.set_xlim(-1, 16)
-        ax.set_ylim(-1, 13)
+            for i in range(self.num_robots):
+                r = self.robots[i]
+                ax.scatter(
+                    x=self.robot_positions[i][0],
+                    y=self.robot_positions[i][1],
+                    c=ROBOT_COLOR,
+                    marker=f"${r}$")
+                ax.scatter(
+                    x=self.goal_positions[i][0],
+                    y=self.goal_positions[i][1],
+                    c=GOAL_COLOR,
+                    marker=f"${r}$")
+            ax.scatter(
+                x=self.filtered_human_position[0],
+                y=self.filtered_human_position[1],
+                c=HUMAN_COLOR,
+                marker="H")
+            
+            ax.set_xlim(-1, 8)
+            ax.set_ylim(-1, 6)
 
-        robot_patch = Line2D([0], [0], marker="o", color=ROBOT_COLOR, linestyle="None", label="robot")
-        goal_patch = Line2D([0], [0], marker="o", color=GOAL_COLOR, linestyle="None", label="target")
-        
-        ax.legend(handles=[robot_patch, goal_patch])
+            robot_patch = Line2D([0], [0], marker="o", color=ROBOT_COLOR, linestyle="None", label="robot")
+            goal_patch = Line2D([0], [0], marker="o", color=GOAL_COLOR, linestyle="None", label="target")
+            
+            ax.legend(handles=[robot_patch, goal_patch])
 
-        def update(frame, scats, visualizer):
-            visualizer.read_redis()
-            for i in range(visualizer.num_robots):
-                scats[i * 2].set_offsets(visualizer.robot_positions[i])
-                scats[i * 2 + 1].set_offsets(visualizer.goal_positions[i])
-            scats[-1].set_offsets(visualizer.human_position)
-            return scats
+            fig.canvas.draw()
+            img_array = np.array(fig.canvas.renderer._renderer)
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+            plt.close(fig)
 
-        ani = animation.FuncAnimation(
-            fig=fig,
-            func=partial(update, scats=scats, visualizer=self),
-            frames=200,
-            interval=50,
-            blit=True,
-        )
-        plt.show()
+            cv2.imshow("figure", img_array)
+            if cv2.waitKey(1) & 0xFF == ord('q'): 
+                break
 
 
 if __name__ == '__main__':
