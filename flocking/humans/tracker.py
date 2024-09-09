@@ -99,6 +99,7 @@ class HumanTracker:
             humans.append([x, y])
 
         self.human_callback(humans, color_image)
+        self.image_history = {k: v for k, v in self.image_history.items() if k > timestamp}
 
 
 if __name__ == "__main__":
