@@ -57,7 +57,7 @@ class StatePublisher(Node):
             self.publish_image(image)
 
         self.human_tracker = HumanTracker(human_callback=human_callback)
-        self.human_timer = self.create_timer(0.1, self.human_tracker.process_frame)
+        self.human_timer = self.create_timer(0.33, self.human_tracker.process_frame)
 
         self.get_logger().info("created state publisher")
 
