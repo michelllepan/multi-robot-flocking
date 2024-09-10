@@ -70,12 +70,12 @@ class FlockFollower(Node):
 
         # head movement
         self.move_head_timer = self.create_timer(0.01, self.move_head)
-        # self.trajectory_client = ActionClient(self,
-        #     FollowJointTrajectory, '/stretch_controller/follow_joint_trajectory')
-        # server_reached = self.trajectory_client.wait_for_server(timeout_sec=10.0)
-        # if not server_reached:
-        #     self.get_logger().error('Unable to connect to server. Timeout exceeded. Is stretch_driver running?')
-        #     sys.exit()
+        self.trajectory_client = ActionClient(self,
+            FollowJointTrajectory, '/stretch_controller/follow_joint_trajectory')
+        server_reached = self.trajectory_client.wait_for_server(timeout_sec=10.0)
+        if not server_reached:
+            self.get_logger().error('Unable to connect to server. Timeout exceeded. Is stretch_driver running?')
+            sys.exit()
         
     def read_redis(self):
         pose_str = self.redis_client.get(self.pose_key)
