@@ -123,6 +123,7 @@ class StatePublisher(Node):
             return
         elif len(detections_robot) == 0:
             self.redis_client.set(self.humans_key, str(detections_robot))
+            return
 
         detections_robot = np.array(detections_robot)
         if detections_robot.ndim < 2:

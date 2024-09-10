@@ -52,7 +52,10 @@ class FlockPlanner:
             canvas_dims=(X_MAX, Y_MAX))
 
         # human setup
-        self.human_filter = HumanFilter(x_min=-1, x_max=X_MAX, y_min=-1, y_max=Y_MAX)
+        self.human_filter = HumanFilter(
+            robots=self.robots,
+            x_min=0, x_max=X_MAX,
+            y_min=0, y_max=Y_MAX)
         self.human = None
 
     def step_flocking(self):
@@ -79,7 +82,7 @@ class FlockPlanner:
 
         # update head targets
         for r in self.robots:
-            head = self.heads[r]
+            # head = self.heads[r]
             if self.human:
                 look = np.atan2(self.human[1] - self.pose.y, self.human[0] - self.pose.x)
             else:
@@ -92,7 +95,7 @@ class FlockPlanner:
         for r in self.robots:
             head_string = self.redis_client.get(self.redis_keys[r]["head"])
             if not head_string: continue
-            head = eval(head)
+            head = eval(head_string)
             self.heads[r] = head
 
             pose_string = self.redis_client.get(self.redis_keys[r]["pose"])

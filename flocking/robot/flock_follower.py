@@ -107,7 +107,6 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_toward_goal(self):
-        return
         if self.pose is None or self.goal is None: return
         if self.obstacle_present_front:
             if self.obstacle_present_back:
