@@ -39,12 +39,9 @@ class HumanFilter:
         return True
 
     def apply(self, candidates: list, num: int):
-        
-        print("before filter", candidates)
         candidates = filter(self.robot_filter, candidates)
         in_bounds = filter(self.bounds_filter, candidates)
         in_bounds = list(in_bounds)
-        print("after filter", in_bounds)
 
         # temporary: choose human closest to center
         if len(in_bounds) <= 1:

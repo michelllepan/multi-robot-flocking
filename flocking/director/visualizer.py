@@ -1,15 +1,15 @@
 import argparse
-from functools import partial
+from io import BytesIO
 
 import cv2
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import redis
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
+from PIL import Image
 
-from flocking.utils import Goal, Pose
+from flocking.utils import Goal, Pose, Humans
 
 REDIS_HOST = "localhost"
 # REDIS_HOST = "10.5.90.8"
@@ -18,7 +18,7 @@ REDIS_PORT = "6379"
 GOAL_COLOR = "mediumpurple"
 ROBOT_COLOR = "steelblue"
 HUMAN_COLOR = "seagreen"
-
+HUMAN_CANDIDATE_COLOR = "darkseagreen"
 
 class Visualizer:
 
@@ -31,6 +31,8 @@ class Visualizer:
 
         self.goals = {}
         self.poses = {}
+        self.images = {}
+        self.humans = {}
         self.filtered_human = None
 
         for r in self.robots:
@@ -38,6 +40,7 @@ class Visualizer:
             self.redis_keys[r]["goal"] = "robot_" + str(r) + "::goal"
             self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
             self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
+            self.redis_keys[r]["image"] = "robot_" + str(r) + "::image"
 
             self.goals[r] = Goal(x=-1.0, y=-1.0)
             self.poses[r] = Pose(x=-1.0, y=-1.0, h=0.0)
@@ -55,6 +58,17 @@ class Visualizer:
             goal = Goal.from_string(goal_string)
             if goal is not None:
                 self.goals[r] = goal
+
+            human_string = self.redis_client.get(self.redis_keys[r]["humans"])
+            humans = Humans.from_string(human_string)
+            if humans is not None:
+                self.humans[r] = humans
+
+            image_data = self.redis_client.get(self.redis_keys[r]["image"])
+            image = Image.open(BytesIO(image_data))
+            image_array = np.array(image)
+            image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+            self.images[r] = image_array
 
         human_string = self.redis_client.get(self.filtered_human_key)
         if human_string:
@@ -74,19 +88,19 @@ class Visualizer:
     
     @property
     def human_candidate_positions(self):
-        return np.array([
-            [self.goals[r].x, self.goals[r].y]
-            for r in self.robots ])
+        return np.concatenate([
+            self.humans[r].coords
+            for r in self.robots ], axis=0)
 
     @property
     def filtered_human_position(self):
         if not self.filtered_human:
             return np.array([-1, -1])
-        return np.array(self.filtered_human)
+        return np.array(self.filtered_human).flatten()
 
     def show_plot(self):
         while True:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(5,5))
             self.read_redis()
 
             for i in range(self.num_robots):
@@ -101,11 +115,18 @@ class Visualizer:
                     y=self.goal_positions[i][1],
                     c=GOAL_COLOR,
                     marker=f"${r}$")
+                
+            ax.scatter(
+                x=self.human_candidate_positions[:,0],
+                y=self.human_candidate_positions[:,1],
+                c=HUMAN_CANDIDATE_COLOR,
+                marker="$h$")
+
             ax.scatter(
                 x=self.filtered_human_position[0],
                 y=self.filtered_human_position[1],
                 c=HUMAN_COLOR,
-                marker="H")
+                marker="$H$")
             
             ax.set_xlim(-1, 8)
             ax.set_ylim(-1, 6)
@@ -116,11 +137,15 @@ class Visualizer:
             ax.legend(handles=[robot_patch, goal_patch])
 
             fig.canvas.draw()
-            img_array = np.array(fig.canvas.renderer._renderer)
-            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+            fig_array = np.array(fig.canvas.renderer._renderer)
+            fig_array = cv2.cvtColor(fig_array, cv2.COLOR_RGB2BGR)
+            fig_array = cv2.resize(fig_array, (640, 640), interpolation=cv2.INTER_AREA)
             plt.close(fig)
 
-            cv2.imshow("figure", img_array)
+            images = [self.images[r] for r in self.robots]
+            all_images = np.concatenate([fig_array] + images, axis=1)
+
+            cv2.imshow("figure", all_images)
             if cv2.waitKey(1) & 0xFF == ord('q'): 
                 break
 
