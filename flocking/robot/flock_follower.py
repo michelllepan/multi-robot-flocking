@@ -3,14 +3,18 @@ import redis
 from scipy.spatial.transform import Rotation
 
 import rclpy
+from rclpy.action import ActionClient
+from rclpy.duration import Duration
 from rclpy.node import Node
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
+from control_msgs.action import FollowJointTrajectory
 from geometry_msgs.msg import Point, Twist
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import BatteryState, LaserScan
+from trajectory_msgs.msg import JointTrajectoryPoint
 
 from flocking.utils import Goal, Pose
 
@@ -38,6 +42,11 @@ class FlockFollower(Node):
         self.vel_pub = self.create_publisher(
             Twist, "/stretch/cmd_vel", 1)
 
+        # head
+        self.joint_states_sub = self.create_subscription(
+            JointState, '/stretch/joint_states', self.read_head, 1)
+        self.head = None
+
         # redis
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         self.redis_timer = self.create_timer(0.01, self.read_redis)
@@ -46,17 +55,28 @@ class FlockFollower(Node):
         self.pose_key = robot_name + "::pose"
         self.obstacles_front_key = robot_name + "::obstacles::front"
         self.obstacles_back_key = robot_name + "::obstacles::back"
+        self.look_key = robot_name + "::look"
 
         # initialize state
         self.pose = None
         self.goal = None
         self.obstacle_present_front = False
         self.obstacle_present_back = False
+        self.look = None
 
-        # movement
-        self.move_timer = self.create_timer(0.01, self.move_toward_goal)
+        # base movement
+        self.move_base_timer = self.create_timer(0.01, self.move_toward_goal)
         self.twist = Twist()
 
+        # head movement
+        self.move_head_timer = self.create_timer(0.01, self.move_head)
+        # self.trajectory_client = ActionClient(self,
+        #     FollowJointTrajectory, '/stretch_controller/follow_joint_trajectory')
+        # server_reached = self.trajectory_client.wait_for_server(timeout_sec=10.0)
+        # if not server_reached:
+        #     self.get_logger().error('Unable to connect to server. Timeout exceeded. Is stretch_driver running?')
+        #     sys.exit()
+        
     def read_redis(self):
         pose_str = self.redis_client.get(self.pose_key)
         self.pose = Pose.from_string(pose_str)
@@ -67,10 +87,15 @@ class FlockFollower(Node):
         obstacle_str = self.redis_client.get(self.obstacles_front_key)
         self.obstacle_present_front = eval(obstacle_str)
 
-        obstacle_str = self.redis_client.get(self.obstacles_back_key)
-        self.obstacle_present_back = eval(obstacle_str)
+        look_str = self.redis_client.get(self.look_key)
+        self.look = eval(look_str) if look_str else None
 
         self.print_info()
+
+    # def read_head(self, msg: JointState):
+    #     index = msg.name.index("joint_head_pan")
+    #     value = msg.position[index]
+    #     self.head = value
 
     def print_info(self):
         print(f"x: {self.pose.x : 5.2f}    y: {self.pose.y : 5.2f}    heading: {self.pose.h : 5.2f}     lin vel: {self.twist.linear.x : 5.2f}    ang vel: {self.twist.angular.z : 5.2f}")
@@ -82,6 +107,7 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_toward_goal(self):
+        return
         if self.pose is None or self.goal is None: return
         if self.obstacle_present_front:
             if self.obstacle_present_back:
@@ -90,7 +116,7 @@ class FlockFollower(Node):
                 self.vel_pub.publish(self.twist)
                 print("ROBOT BLOCKED: STOPPING !!!!1!!11!111!!!!!!!!!")
             else:
-                self.twist.linear.x = -0.5
+                self.twist.linear.x = -0.2
                 self.twist.angular.z = 0.0
                 self.vel_pub.publish(self.twist)
                 print("BACKING UP")
@@ -132,3 +158,20 @@ class FlockFollower(Node):
 
         # publish twist
         self.vel_pub.publish(self.twist)
+
+    def move_head(self):
+        if self.look is None:
+            return
+
+        look = self.look - self.pose.h
+        look = (look + np.pi) % (2 * np.pi) - np.pi  # wrap to between -pi and pi
+
+        point = JointTrajectoryPoint()
+        point.time_from_start = Duration(seconds=2.0).to_msg()
+        point.positions = [look]
+
+        trajectory_goal = FollowJointTrajectory.Goal()
+        trajectory_goal.trajectory.joint_names = ["joint_head_pan"]
+        trajectory_goal.trajectory.points = [point]
+
+        self.trajectory_client.send_goal_async(trajectory_goal)

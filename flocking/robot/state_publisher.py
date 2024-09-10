@@ -8,7 +8,7 @@ from scipy.spatial.transform import Rotation
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import BatteryState, LaserScan
+from sensor_msgs.msg import BatteryState, JointState, LaserScan
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
@@ -55,6 +55,11 @@ class StatePublisher(Node):
         def human_callback(humans, image):
             self.publish_humans(humans)
             self.publish_image(image)
+
+        # head
+        self.joint_states_sub = self.create_subscription(
+            JointState, '/stretch/joint_states', self.read_head, 1)
+        self.head = None
 
         self.human_tracker = HumanTracker(human_callback=human_callback)
         self.human_timer = self.create_timer(0.33, self.human_tracker.process_frame)
@@ -113,7 +118,7 @@ class StatePublisher(Node):
         self.redis_client.set(self.obstacles_back_key, str(obstacle_present))
 
     def publish_humans(self, detections_robot):
-        if self.pose is None or not detections_robot:
+        if self.pose is None or self.head is None or not detections_robot:
             return
 
         detections_robot = np.array(detections_robot)
@@ -125,7 +130,7 @@ class StatePublisher(Node):
         detections_robot = np.hstack((detections_robot, z))
 
         # rotation
-        rot = Rotation.from_euler("z", self.pose.h)
+        rot = Rotation.from_euler("z", self.pose.h + self.head)
         detections_world = rot.apply(detections_robot)
         detections_world = detections_world[:, :2]
 
@@ -143,3 +148,8 @@ class StatePublisher(Node):
 
         self.redis_client.set(self.image_key, output.getvalue())
         output.close()
+
+    def read_head(self, msg: JointState):
+        index = msg.name.index("joint_head_pan")
+        value = msg.position[index]
+        self.head = value
