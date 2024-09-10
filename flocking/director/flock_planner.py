@@ -32,6 +32,7 @@ class FlockPlanner:
             self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
             self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
             self.redis_keys[r]["head"] = "robot_" + str(r) + "::head"
+            self.redis_keys[r]["look"] = "robot_" + str(r) + "::look"
 
         self.filtered_human_key = "filtered_human"
 

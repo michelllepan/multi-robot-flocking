@@ -13,7 +13,7 @@ from tf2_ros.transform_listener import TransformListener
 from control_msgs.action import FollowJointTrajectory
 from geometry_msgs.msg import Point, Twist
 from nav_msgs.msg import Odometry
-from sensor_msgs.msg import BatteryState, LaserScan
+from sensor_msgs.msg import BatteryState, JointState, LaserScan
 from trajectory_msgs.msg import JointTrajectoryPoint
 
 from flocking.utils import Goal, Pose
@@ -43,8 +43,8 @@ class FlockFollower(Node):
             Twist, "/stretch/cmd_vel", 1)
 
         # head
-        self.joint_states_sub = self.create_subscription(
-            JointState, '/stretch/joint_states', self.read_head, 1)
+        # self.joint_states_sub = self.create_subscription(
+        #     JointState, '/stretch/joint_states', self.read_head, 1)
         self.head = None
 
         # redis

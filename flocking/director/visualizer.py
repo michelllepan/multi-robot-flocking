@@ -88,9 +88,12 @@ class Visualizer:
     
     @property
     def human_candidate_positions(self):
+        to_concat = [self.humans[r].coords 
+                     for r in self.robots if self.humans[r].coords]
+        if not to_concat: return None
         return np.concatenate([
             self.humans[r].coords
-            for r in self.robots ], axis=0)
+            for r in self.robots if self.humans[r].coords], axis=0)
 
     @property
     def filtered_human_position(self):
@@ -116,17 +119,18 @@ class Visualizer:
                     c=GOAL_COLOR,
                     marker=f"${r}$")
                 
-            ax.scatter(
-                x=self.human_candidate_positions[:,0],
-                y=self.human_candidate_positions[:,1],
-                c=HUMAN_CANDIDATE_COLOR,
-                marker="$h$")
+            if self.human_candidate_positions is not None:
+                ax.scatter(
+                    x=self.human_candidate_positions[:,0],
+                    y=self.human_candidate_positions[:,1],
+                    c=HUMAN_CANDIDATE_COLOR,
+                    marker="$h$")
 
-            ax.scatter(
-                x=self.filtered_human_position[0],
-                y=self.filtered_human_position[1],
-                c=HUMAN_COLOR,
-                marker="$H$")
+                ax.scatter(
+                    x=self.filtered_human_position[0],
+                    y=self.filtered_human_position[1],
+                    c=HUMAN_COLOR,
+                    marker="$H$")
             
             ax.set_xlim(-1, 8)
             ax.set_ylim(-1, 6)
