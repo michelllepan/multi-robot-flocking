@@ -36,6 +36,7 @@ class StatePublisher(Node):
         self.obstacles_back_key = robot_name + "::obstacles::back"
         self.humans_key = robot_name + "::humans"
         self.image_key = robot_name + "::image" 
+        self.head_key = robot_name + "::head"
 
         # pose
         self.tf_buffer = Buffer()
@@ -58,7 +59,7 @@ class StatePublisher(Node):
 
         # head
         self.joint_states_sub = self.create_subscription(
-            JointState, '/stretch/joint_states', self.read_head, 1)
+            JointState, '/stretch/joint_states', self.publish_head, 1)
         self.head = None
 
         self.human_tracker = HumanTracker(human_callback=human_callback)
@@ -118,8 +119,10 @@ class StatePublisher(Node):
         self.redis_client.set(self.obstacles_back_key, str(obstacle_present))
 
     def publish_humans(self, detections_robot):
-        if self.pose is None or self.head is None or not detections_robot:
+        if self.pose is None or self.head is None or detections_robot is None:
             return
+        elif len(detections_robot) == 0:
+            self.redis_client.set(self.humans_key, str(detections_robot))
 
         detections_robot = np.array(detections_robot)
         if detections_robot.ndim < 2:
@@ -149,7 +152,8 @@ class StatePublisher(Node):
         self.redis_client.set(self.image_key, output.getvalue())
         output.close()
 
-    def read_head(self, msg: JointState):
+    def publish_head(self, msg: JointState):
         index = msg.name.index("joint_head_pan")
         value = msg.position[index]
         self.head = value
+        self.redis_client.set(self.head_key, self.head)
