@@ -43,8 +43,8 @@ class FlockFollower(Node):
             Twist, "/stretch/cmd_vel", 1)
 
         # head
-        # self.joint_states_sub = self.create_subscription(
-        #     JointState, '/stretch/joint_states', self.read_head, 1)
+        self.joint_states_sub = self.create_subscription(
+            JointState, '/stretch/joint_states', self.read_head, 1)
         self.head = None
 
         # redis
@@ -69,7 +69,7 @@ class FlockFollower(Node):
         self.twist = Twist()
 
         # head movement
-        self.move_head_timer = self.create_timer(0.01, self.move_head)
+        self.move_head_timer = self.create_timer(0.1, self.move_head)
         self.trajectory_client = ActionClient(self,
             FollowJointTrajectory, '/stretch_controller/follow_joint_trajectory')
         server_reached = self.trajectory_client.wait_for_server(timeout_sec=10.0)
@@ -92,10 +92,10 @@ class FlockFollower(Node):
 
         self.print_info()
 
-    # def read_head(self, msg: JointState):
-    #     index = msg.name.index("joint_head_pan")
-    #     value = msg.position[index]
-    #     self.head = value
+    def read_head(self, msg: JointState):
+        index = msg.name.index("joint_head_pan")
+        value = msg.position[index]
+        self.head = value
 
     def print_info(self):
         print(f"x: {self.pose.x : 5.2f}    y: {self.pose.y : 5.2f}    heading: {self.pose.h : 5.2f}     lin vel: {self.twist.linear.x : 5.2f}    ang vel: {self.twist.angular.z : 5.2f}")
@@ -107,6 +107,7 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_toward_goal(self):
+        return
         if self.pose is None or self.goal is None: return
         if self.obstacle_present_front:
             if self.obstacle_present_back:
@@ -164,6 +165,9 @@ class FlockFollower(Node):
 
         look = self.look - self.pose.h
         look = (look + np.pi) % (2 * np.pi) - np.pi  # wrap to between -pi and pi
+
+        if abs(look - self.head) < 0.1:
+            return
 
         point = JointTrajectoryPoint()
         point.time_from_start = Duration(seconds=2.0).to_msg()
