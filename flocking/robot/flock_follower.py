@@ -160,7 +160,7 @@ class FlockFollower(Node):
         self.vel_pub.publish(self.twist)
 
     def move_head(self):
-        if self.look is None:
+        if self.look is None or self.head is None:
             return
 
         look = self.look - self.pose.h
