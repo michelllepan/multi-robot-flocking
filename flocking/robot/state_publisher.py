@@ -59,7 +59,7 @@ class StatePublisher(Node):
 
         # head
         self.joint_states_sub = self.create_subscription(
-            JointState, '/stretch/joint_states', self.publish_head, 1)
+            JointState, '/joint_states', self.publish_head, 1)
         self.head = None
 
         self.human_tracker = HumanTracker(human_callback=human_callback)
@@ -158,3 +158,4 @@ class StatePublisher(Node):
         value = msg.position[index]
         self.head = value
         self.redis_client.set(self.head_key, self.head)
+        
