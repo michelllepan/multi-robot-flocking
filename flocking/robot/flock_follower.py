@@ -107,7 +107,7 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_toward_goal(self):
-        return
+        # return
         if self.pose is None or self.goal is None: return
         if self.obstacle_present_front:
             if self.obstacle_present_back:
@@ -170,8 +170,13 @@ class FlockFollower(Node):
             return
 
         point = JointTrajectoryPoint()
-        point.time_from_start = Duration(seconds=2.0).to_msg()
-        point.positions = [look]
+        point.time_from_start = Duration(seconds=10.0).to_msg()
+
+        if look - self.head < 0:
+            target = max(-0.2, look - self.head)
+        else:
+            target = min(0.2, look - self.head)
+        point.positions = [self.head + target]
 
         trajectory_goal = FollowJointTrajectory.Goal()
         trajectory_goal.trajectory.joint_names = ["joint_head_pan"]
