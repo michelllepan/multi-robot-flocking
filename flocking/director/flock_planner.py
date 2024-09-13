@@ -71,6 +71,8 @@ class FlockPlanner:
             if self.human:
                 human_array = np.array(self.human).reshape((2,))
                 self.boids_runner.move_human(human_array)
+            else:
+                self.human = None
         else:
             self.human = None
 
@@ -85,9 +87,10 @@ class FlockPlanner:
         for r in self.robots:
             # head = self.heads[r]
             if self.human:
-                look = np.atan2(self.human[1] - self.pose.y, self.human[0] - self.pose.x)
+                look = np.atan2(self.human[1] - self.poses[r].y, self.human[0] - self.poses[r].x)
             else:
-                look = np.sin((time.time() + r) / 4) * 1.5
+                # look = np.sin((time.time() + r) / 4) * 1.5
+                look = self.poses[r].h
             self.looks[r] = look
 
         self.write_redis()

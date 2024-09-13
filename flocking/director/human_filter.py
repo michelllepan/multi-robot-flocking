@@ -44,7 +44,9 @@ class HumanFilter:
         in_bounds = list(in_bounds)
 
         # temporary: choose human closest to center
-        if len(in_bounds) <= 1:
-            return in_bounds
+        if len(in_bounds) == 0:
+            return []
+        elif len(in_bounds) == 1:
+            return in_bounds[0]
         return min(in_bounds, key=self.dist_to_center)
 
