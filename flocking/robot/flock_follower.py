@@ -56,6 +56,7 @@ class FlockFollower(Node):
         self.obstacles_front_key = robot_name + "::obstacles::front"
         self.obstacles_back_key = robot_name + "::obstacles::back"
         self.look_key = robot_name + "::look"
+        self.arm_key = robot_name + "::arm"
 
         # initialize state
         self.pose = None
@@ -63,13 +64,14 @@ class FlockFollower(Node):
         self.obstacle_present_front = False
         self.obstacle_present_back = False
         self.look = None
+        self.arm = None
 
         # base movement
-        self.move_base_timer = self.create_timer(0.01, self.move_toward_goal)
+        self.move_base_timer = self.create_timer(0.01, self.move_base)
         self.twist = Twist()
 
-        # head movement
-        self.move_head_timer = self.create_timer(0.1, self.move_head)
+        # joint movement
+        self.move_joints_timer = self.create_timer(0.1, self.move_joints)
         self.trajectory_client = ActionClient(self,
             FollowJointTrajectory, '/stretch_controller/follow_joint_trajectory')
         server_reached = self.trajectory_client.wait_for_server(timeout_sec=10.0)
@@ -90,6 +92,9 @@ class FlockFollower(Node):
         look_str = self.redis_client.get(self.look_key)
         self.look = eval(look_str) if look_str else None
 
+        arm_str = self.redis_client.get(self.arm_key)
+        self.arm = eval(arm_str) if arm_str else None
+
         self.print_info()
 
     def read_head(self, msg: JointState):
@@ -106,8 +111,8 @@ class FlockFollower(Node):
         return (abs(self.pose.x - self.goal.x) < GOAL_TOLERANCE and 
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
-    def move_toward_goal(self):
-        # return
+    def move_base(self):
+        return
         if self.pose is None or self.goal is None: return
         if self.obstacle_present_front:
             if self.obstacle_present_back:
@@ -159,27 +164,77 @@ class FlockFollower(Node):
         # publish twist
         self.vel_pub.publish(self.twist)
 
+    def move_joints(self):
+        head = self.move_head()
+        arm = self.move_arm()
+
+        point = JointTrajectoryPoint()
+        point.time_from_start = Duration(seconds=2.0).to_msg()
+        point.positions = [v for v in head.values()] + [v for v in arm.values()]
+
+        trajectory_goal = FollowJointTrajectory.Goal()
+        trajectory_goal.trajectory.joint_names = [k for k in head.keys()] + [k for k in arm.keys()]
+        trajectory_goal.trajectory.points = [point]
+        self.trajectory_client.send_goal_async(trajectory_goal)
+
     def move_head(self):
         if self.look is None or self.head is None:
-            return
+            return {}
 
         look = self.look - self.pose.h
         look = (look + np.pi) % (2 * np.pi) - np.pi  # wrap to between -pi and pi
 
         if abs(look - self.head) < 0.1:
-            return
+            return {}
 
-        point = JointTrajectoryPoint()
-        point.time_from_start = Duration(seconds=10.0).to_msg()
+        # point = JointTrajectoryPoint()
+        # point.time_from_start = Duration(seconds=10.0).to_msg()
 
         if look - self.head < 0:
             target = max(-0.2, look - self.head)
         else:
             target = min(0.2, look - self.head)
-        point.positions = [self.head + target]
+        # point.positions = [self.head + target]
 
-        trajectory_goal = FollowJointTrajectory.Goal()
-        trajectory_goal.trajectory.joint_names = ["joint_head_pan"]
-        trajectory_goal.trajectory.points = [point]
+        return {"joint_head_pan": self.head + target}
 
-        self.trajectory_client.send_goal_async(trajectory_goal)
+    def move_arm(self):
+        if self.arm is None:
+            return {}
+        
+        """
+        - joint_lift
+        - joint_arm_l3
+        - joint_arm_l2
+        - joint_arm_l1
+        - joint_arm_l0
+        - joint_wrist_yaw
+        - joint_wrist_pitch
+        - joint_wrist_roll
+        - joint_gripper_finger_left
+        - joint_gripper_finger_right
+        """
+        arm_dict = {}
+        for key, value in self.arm.items():
+            # point = JointTrajectoryPoint()
+            # point.time_from_start = Duration(seconds=2.0).to_msg()
+            # point.positions = [value]
+            # arm_dict["joint_" + key] = point
+            arm_dict["joint_" + key] = value
+        return arm_dict
+
+        # lift = JointTrajectoryPoint()
+        # lift.time_from_start = Duration(seconds=2.0).to_msg()
+        # lift.positions = [self.arm["lift"]]
+        
+        # telescope = JointTrajectoryPoint()
+        # telescope.time_from_start = Duration(seconds=2.0).to_msg()
+        # telescope.positions = [0.1, 0.1, 0.1, 0.1]
+
+        # return {
+        #     "joint_lift": lift,
+        #     "joint_arm": telescope,
+        # }
+
+
+        
