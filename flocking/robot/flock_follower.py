@@ -112,7 +112,7 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_base(self):
-        return
+        # return
         if self.pose is None or self.goal is None: return
         if self.obstacle_present_front:
             if self.obstacle_present_back:
@@ -165,15 +165,16 @@ class FlockFollower(Node):
         self.vel_pub.publish(self.twist)
 
     def move_joints(self):
-        head = self.move_head()
-        arm = self.move_arm()
+        # head_pos, head_vel = self.move_head()
+        joint_names, pos, vel = self.move_arm()
 
         point = JointTrajectoryPoint()
-        point.time_from_start = Duration(seconds=2.0).to_msg()
-        point.positions = [v for v in head.values()] + [v for v in arm.values()]
+        point.time_from_start = Duration(seconds=1.0).to_msg()
+        point.positions = pos
+        point.velocities = vel
 
         trajectory_goal = FollowJointTrajectory.Goal()
-        trajectory_goal.trajectory.joint_names = [k for k in head.keys()] + [k for k in arm.keys()]
+        trajectory_goal.trajectory.joint_names = joint_names
         trajectory_goal.trajectory.points = [point]
         self.trajectory_client.send_goal_async(trajectory_goal)
 
@@ -214,27 +215,8 @@ class FlockFollower(Node):
         - joint_gripper_finger_left
         - joint_gripper_finger_right
         """
-        arm_dict = {}
-        for key, value in self.arm.items():
-            # point = JointTrajectoryPoint()
-            # point.time_from_start = Duration(seconds=2.0).to_msg()
-            # point.positions = [value]
-            # arm_dict["joint_" + key] = point
-            arm_dict["joint_" + key] = value
-        return arm_dict
-
-        # lift = JointTrajectoryPoint()
-        # lift.time_from_start = Duration(seconds=2.0).to_msg()
-        # lift.positions = [self.arm["lift"]]
-        
-        # telescope = JointTrajectoryPoint()
-        # telescope.time_from_start = Duration(seconds=2.0).to_msg()
-        # telescope.positions = [0.1, 0.1, 0.1, 0.1]
-
-        # return {
-        #     "joint_lift": lift,
-        #     "joint_arm": telescope,
-        # }
-
-
+        pos = [value[0] for value in self.arm.values()]
+        vel = [value[1] for value in self.arm.values()]
+        joint_names = ["joint_" + key for key in self.arm.keys()]
+        return joint_names, pos, vel
         
