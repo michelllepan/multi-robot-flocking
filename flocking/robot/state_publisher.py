@@ -103,17 +103,17 @@ class StatePublisher(Node):
         angles = np.linspace(msg.angle_min, msg.angle_max, len(msg.ranges))
 
         # Work out the y coordinates of the ranges
-        points = [r * np.sin(theta) if (theta < -2.5 or theta > 2.5) else np.inf for r,theta in zip(msg.ranges, angles)]
+        points = [r * np.sin(theta) if (theta < -np.pi/2 or theta > np.pi/2) else np.inf for r,theta in zip(msg.ranges, angles)]
 
         # If we're close to the x axis, keep the range, otherwise use inf, which means "no return"
         new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
 
         # If closest measured scan is within obstacle threshold, stop
-        obstacle_present = min(new_ranges) < 0.5
+        obstacle_present = min(new_ranges) < 0.75
         self.redis_client.set(self.obstacles_front_key, str(obstacle_present))
 
         # do the same but for the back
-        points = [r * np.sin(theta) if (theta < 0.5 and theta > -0.5) else np.inf for r,theta in zip(msg.ranges, angles)]
+        points = [r * np.sin(theta) if (theta < np.pi/2 and theta > -np.pi/2) else np.inf for r,theta in zip(msg.ranges, angles)]
         new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
         obstacle_present = min(new_ranges) < 0.5
         self.redis_client.set(self.obstacles_back_key, str(obstacle_present))

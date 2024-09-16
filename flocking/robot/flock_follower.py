@@ -49,7 +49,7 @@ class FlockFollower(Node):
 
         # redis
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
-        self.redis_timer = self.create_timer(0.01, self.read_redis)
+        self.redis_timer = self.create_timer(0.005, self.read_redis)
 
         self.goal_key = robot_name + "::goal"
         self.pose_key = robot_name + "::pose"
@@ -67,7 +67,7 @@ class FlockFollower(Node):
         self.arm = None
 
         # base movement
-        self.move_base_timer = self.create_timer(0.01, self.move_base)
+        self.move_base_timer = self.create_timer(0.005, self.move_base)
         self.twist = Twist()
 
         # joint movement
@@ -121,7 +121,7 @@ class FlockFollower(Node):
                 self.vel_pub.publish(self.twist)
                 print("ROBOT BLOCKED: STOPPING !!!!1!!11!111!!!!!!!!!")
             else:
-                self.twist.linear.x = -0.2
+                self.twist.linear.x = -0.1
                 self.twist.angular.z = 0.0
                 self.vel_pub.publish(self.twist)
                 print("BACKING UP")
