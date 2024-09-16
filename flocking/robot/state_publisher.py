@@ -109,14 +109,14 @@ class StatePublisher(Node):
         new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
 
         # If closest measured scan is within obstacle threshold, stop
-        obstacle_present = min(new_ranges) < 0.75
-        self.redis_client.set(self.obstacles_front_key, str(obstacle_present))
+        # obstacle_present = min(new_ranges) < 0.75
+        self.redis_client.set(self.obstacles_front_key, str(min(new_ranges)))
 
         # do the same but for the back
-        points = [r * np.sin(theta) if (theta < np.pi/2 and theta > -np.pi/2) else np.inf for r,theta in zip(msg.ranges, angles)]
+        points = [r * np.sin(theta) if (theta < 0.9 and theta > -0.9) else np.inf for r,theta in zip(msg.ranges, angles)]
         new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
-        obstacle_present = min(new_ranges) < 0.5
-        self.redis_client.set(self.obstacles_back_key, str(obstacle_present))
+        # obstacle_present = min(new_ranges) < 0.5
+        self.redis_client.set(self.obstacles_back_key, str(min(new_ranges)))
 
     def publish_humans(self, detections_robot):
         if self.pose is None or self.head is None or detections_robot is None:
