@@ -35,8 +35,10 @@ class FlockPlanner:
             self.redis_keys[r]["look"] = "robot_" + str(r) + "::look"
 
         self.filtered_human_key = "filtered_human"
+        self.mode_key = "mode"
 
         # populate data
+        self.mode = "DEFAULT"
         self.goals = {}
         self.looks = {}
         self.poses = {}
@@ -77,7 +79,7 @@ class FlockPlanner:
             self.human = None
 
         # update base targets
-        self.boids_runner.update_targets(steps=2, mode="FOLLOW")
+        self.boids_runner.update_targets(steps=2, mode=self.mode)
         for i in range(len(self.robots)):
             r = self.robots[i]
             t = self.boids_runner.target_positions[i]
@@ -113,6 +115,10 @@ class FlockPlanner:
             humans = Humans.from_string(human_string)
             if humans is None: continue
             self.humans[r] = humans
+
+        mode_string = self.redis_client.get(self.mode_key)
+        if mode_string is not None:
+            self.mode = mode_string.decode("utf-8")
 
     def write_redis(self):
         for r in self.robots:
