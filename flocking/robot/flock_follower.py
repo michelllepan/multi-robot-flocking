@@ -55,6 +55,7 @@ class FlockFollower(Node):
         self.pose_key = robot_name + "::pose"
         self.obstacles_front_key = robot_name + "::obstacles::front"
         self.obstacles_back_key = robot_name + "::obstacles::back"
+        self.obstacles_side_key = robot_name + "::obstacles::side"
         self.look_key = robot_name + "::look"
         self.arm_key = robot_name + "::arm"
 
@@ -63,6 +64,7 @@ class FlockFollower(Node):
         self.goal = None
         self.obstacle_front = False
         self.obstacle_back = False
+        self.obstacle_side = False
         self.look = None
         self.arm = None
 
@@ -71,7 +73,7 @@ class FlockFollower(Node):
         self.twist = Twist()
 
         # joint movement
-        self.move_joints_timer = self.create_timer(0.1, self.move_joints)
+        self.move_joints_timer = self.create_timer(0.05, self.move_joints)
         self.trajectory_client = ActionClient(self,
             FollowJointTrajectory, '/stretch_controller/follow_joint_trajectory')
         server_reached = self.trajectory_client.wait_for_server(timeout_sec=10.0)
@@ -91,6 +93,9 @@ class FlockFollower(Node):
 
         obstacle_str = self.redis_client.get(self.obstacles_back_key)
         self.obstacle_back = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
+
+        obstacle_str = self.redis_client.get(self.obstacles_side_key)
+        self.obstacle_side = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
 
         look_str = self.redis_client.get(self.look_key)
         self.look = eval(look_str) if look_str else None
@@ -115,7 +120,7 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_base(self):
-        return
+        # return
         if self.pose is None or self.goal is None: return
         if self.obstacle_front < 0.75:
             if self.obstacle_back < 0.5:
@@ -206,7 +211,17 @@ class FlockFollower(Node):
     def move_arm(self):
         if self.arm is None:
             return {}
-        
+
+        if self.obstacle_side < 0.75:
+            retract = {
+                "arm_l3": (0.0, 0.2),
+                "arm_l2": (0.0, 0.2),
+                "arm_l1": (0.0, 0.2),
+                "arm_l0": (0.0, 0.2),
+                "wrist_yaw": (3.0, 0.4),
+                "wrist_pitch": (-1.0, 0.4),
+            }
+            self.arm.update(retract)
         """
         - joint_lift
         - joint_arm_l3

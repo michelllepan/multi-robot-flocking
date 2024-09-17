@@ -34,6 +34,7 @@ class StatePublisher(Node):
         self.battery_key = robot_name + "::battery"
         self.obstacles_front_key = robot_name + "::obstacles::front"
         self.obstacles_back_key = robot_name + "::obstacles::back"
+        self.obstacles_side_key = robot_name + "::obstacles::side"
         self.humans_key = robot_name + "::humans"
         self.image_key = robot_name + "::image" 
         self.head_key = robot_name + "::head"
@@ -102,21 +103,25 @@ class StatePublisher(Node):
     def publish_obstacles(self, msg: LaserScan):
         angles = np.linspace(msg.angle_min, msg.angle_max, len(msg.ranges))
 
-        # Work out the y coordinates of the ranges
+        ### FRONT
+        # work out the y coordinates of the ranges
         points = [r * np.sin(theta) if (theta < -np.pi/2 or theta > np.pi/2) else np.inf for r,theta in zip(msg.ranges, angles)]
-
-        # If we're close to the x axis, keep the range, otherwise use inf, which means "no return"
+        # if we're close to the x axis, keep the range, otherwise use inf, which means "no return"
         new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
-
-        # If closest measured scan is within obstacle threshold, stop
-        # obstacle_present = min(new_ranges) < 0.75
+        # publish distance to closest point
         self.redis_client.set(self.obstacles_front_key, str(min(new_ranges)))
 
-        # do the same but for the back
+        print(min(new_ranges))
+
+        ### BACK
         points = [r * np.sin(theta) if (theta < 0.9 and theta > -0.9) else np.inf for r,theta in zip(msg.ranges, angles)]
         new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
-        # obstacle_present = min(new_ranges) < 0.5
         self.redis_client.set(self.obstacles_back_key, str(min(new_ranges)))
+
+        ### SIDE
+        points = [r * np.cos(theta) if (theta > np.pi/4) else np.inf for r,theta in zip(msg.ranges, angles)]
+        new_ranges = [r if abs(x) < 0.5 else np.inf for r,x in zip(msg.ranges, points)]
+        self.redis_client.set(self.obstacles_side_key, str(min(new_ranges)))
 
     def publish_humans(self, detections_robot):
         if self.pose is None or self.head is None or detections_robot is None:
