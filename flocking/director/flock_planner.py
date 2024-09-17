@@ -77,7 +77,7 @@ class FlockPlanner:
             self.human = None
 
         # update base targets
-        self.boids_runner.update_targets(steps=20, mode="FOLLOW")
+        self.boids_runner.update_targets(steps=2, mode="FOLLOW")
         for i in range(len(self.robots)):
             r = self.robots[i]
             t = self.boids_runner.target_positions[i]
