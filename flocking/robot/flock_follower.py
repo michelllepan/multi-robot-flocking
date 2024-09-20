@@ -19,10 +19,10 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 from flocking.utils import Goal, Pose
 
 
-GOAL_TOLERANCE = 0.1
+GOAL_TOLERANCE = 0.05
 OBS_TOLERANCE = 0.5
 
-LIN_VEL_SCALE = 0.5
+LIN_VEL_SCALE = 1.5
 LIN_VEL_MAX = 0.3
 
 ANG_VEL_SCALE = 0.6
