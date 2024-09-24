@@ -14,7 +14,7 @@ from mediapipe.tasks.python import vision
 class MediaPipeDetector:
 
     def __init__(self, result_callback):
-        base_options = tasks.BaseOptions(model_asset_path="models/pose_landmarker.task")
+        base_options = tasks.BaseOptions(model_asset_path="models/pose_landmarker_lite.task")
         options = vision.PoseLandmarkerOptions(
             base_options=base_options,
             running_mode=vision.RunningMode.LIVE_STREAM,
