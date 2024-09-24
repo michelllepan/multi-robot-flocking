@@ -17,7 +17,7 @@ from flocking.humans import HumanTracker
 from flocking.utils import Pose
 
 
-REDIS_HOST = "10.5.90.8"
+REDIS_HOST = "10.36.166.15"
 REDIS_PORT = "6379"
 
 class StatePublisher(Node):
@@ -64,7 +64,7 @@ class StatePublisher(Node):
         self.head = None
 
         self.human_tracker = HumanTracker(human_callback=human_callback)
-        self.human_timer = self.create_timer(0.33, self.human_tracker.process_frame)
+        self.human_timer = self.create_timer(0.25, self.human_tracker.process_frame)
 
         self.get_logger().info("created state publisher")
 
