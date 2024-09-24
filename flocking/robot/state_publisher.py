@@ -8,6 +8,7 @@ from scipy.spatial.transform import Rotation
 
 import rclpy
 from rclpy.node import Node
+from geometry_msgs.msg import Twist
 from sensor_msgs.msg import BatteryState, JointState, LaserScan
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
@@ -17,7 +18,7 @@ from flocking.humans import HumanTracker
 from flocking.utils import Pose
 
 
-REDIS_HOST = "10.36.166.15"
+REDIS_HOST = "10.36.162.134"
 REDIS_PORT = "6379"
 
 class StatePublisher(Node):
@@ -66,6 +67,12 @@ class StatePublisher(Node):
         self.human_tracker = HumanTracker(human_callback=human_callback)
         self.human_timer = self.create_timer(0.25, self.human_tracker.process_frame)
 
+        # music
+        self.music_base_sub = self.create_subscription(
+            Twist, '/stretch/cmd_vel', self.publish_music_base, 1)
+        self.music_joints_sub = self.create_subscription(
+            JointState, '/joint_states', self.publish_music_joints, 1)
+
         self.get_logger().info("created state publisher")
 
     def publish_pose(self):
@@ -110,8 +117,6 @@ class StatePublisher(Node):
         new_ranges = [r if abs(y) < 0.5 else np.inf for r,y in zip(msg.ranges, points)]
         # publish distance to closest point
         self.redis_client.set(self.obstacles_front_key, str(min(new_ranges)))
-
-        print(min(new_ranges))
 
         ### BACK
         points = [r * np.sin(theta) if (theta < 0.9 and theta > -0.9) else np.inf for r,theta in zip(msg.ranges, angles)]
@@ -163,4 +168,47 @@ class StatePublisher(Node):
         value = msg.position[index]
         self.head = value
         self.redis_client.set(self.head_key, self.head)
+
+    def publish_music_base(self, msg: Twist):
+        linear = msg.linear.x
+        if abs(linear) > 1e-3:
+            self.redis_client.set("music::0", "play")
+        else:
+            self.redis_client.set("music::0", "stop")
+
+        angular = msg.angular.z
+        if abs(angular) > 1e-3:
+            self.redis_client.set("music::1", "play")
+        else:
+            self.redis_client.set("music::1", "stop")
+
+    def publish_music_joints(self, msg: JointState):
+        lift_index = msg.name.index("joint_lift")
+        lift_vel = msg.velocity[lift_index]
+        if abs(lift_vel) > 1e-3:
+            self.redis_client.set("music::2", "play")
+        else:
+            self.redis_client.set("music::2", "stop")
+
+        arm_index = msg.name.index("joint_arm_l3")
+        arm_vel = msg.velocity[arm_index]
+        if abs(arm_vel) > 1e-3:
+            self.redis_client.set("music::3", "play")
+        else:
+            self.redis_client.set("music::3", "stop")
+
+        wrist_yaw_index = msg.name.index("joint_wrist_yaw")
+        wrist_yaw_vel = msg.velocity[wrist_yaw_index]
+        if abs(wrist_yaw_vel) > 1e-3:
+            self.redis_client.set("music::4", "play")
+        else:
+            self.redis_client.set("music::4", "stop")
+
+        wrist_pitch_index = msg.name.index("joint_wrist_pitch")
+        wrist_pitch_vel = msg.velocity[wrist_pitch_index]
+        if abs(wrist_pitch_vel) > 1e-3:
+            self.redis_client.set("music::5", "play")
+        else:
+            self.redis_client.set("music::5", "stop")
+
         
