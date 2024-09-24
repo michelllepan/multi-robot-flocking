@@ -1,8 +1,10 @@
 import redis
+import time
 import vlc
 
 
-REDIS_HOST = "10.36.166.15"
+# REDIS_HOST = "10.36.166.15"
+REDIS_HOST = "localhost"
 REDIS_PORT = "6379"
 
 
@@ -36,13 +38,17 @@ class MusicPlayer:
         for i in self.players:
             play_str = self.redis_client.get(f"music::{i}")
             if play_str is None: continue
-            play = eval(play_str)
 
+            play = play_str.decode("utf-8")
             if play == "play":
                 self.play(i)
             else:
                 self.stop(i)
 
 
-
+if __name__ == "__main__":
+    player = MusicPlayer()
+    while True:
+        player.update()
+        time.sleep(0.1)
     
