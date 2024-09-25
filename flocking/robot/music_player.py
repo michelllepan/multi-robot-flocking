@@ -3,7 +3,7 @@ import time
 import vlc
 
 
-REDIS_HOST = "10.36.162.134"
+REDIS_HOST = "10.36.166.15"
 REDIS_PORT = "6379"
 
 

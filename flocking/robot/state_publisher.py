@@ -18,7 +18,7 @@ from flocking.humans import HumanTracker
 from flocking.utils import Pose
 
 
-REDIS_HOST = "10.36.162.134"
+REDIS_HOST = "10.36.166.15"
 REDIS_PORT = "6379"
 
 class StatePublisher(Node):
@@ -183,32 +183,36 @@ class StatePublisher(Node):
             self.redis_client.set("music::1", "stop")
 
     def publish_music_joints(self, msg: JointState):
-        lift_index = msg.name.index("joint_lift")
-        lift_vel = msg.velocity[lift_index]
-        if abs(lift_vel) > 1e-3:
-            self.redis_client.set("music::2", "play")
-        else:
-            self.redis_client.set("music::2", "stop")
+        if "joint_lift" in msg.name:
+            lift_index = msg.name.index("joint_lift")
+            lift_vel = msg.velocity[lift_index]
+            if abs(lift_vel) > 1e-3:
+                self.redis_client.set("music::2", "play")
+            else:
+                self.redis_client.set("music::2", "stop")
 
-        arm_index = msg.name.index("joint_arm_l3")
-        arm_vel = msg.velocity[arm_index]
-        if abs(arm_vel) > 1e-3:
-            self.redis_client.set("music::3", "play")
-        else:
-            self.redis_client.set("music::3", "stop")
+        if "joint_arm_l3" in msg.name:
+            arm_index = msg.name.index("joint_arm_l3")
+            arm_vel = msg.velocity[arm_index]
+            if abs(arm_vel) > 1e-3:
+                self.redis_client.set("music::3", "play")
+            else:
+                self.redis_client.set("music::3", "stop")
 
-        wrist_yaw_index = msg.name.index("joint_wrist_yaw")
-        wrist_yaw_vel = msg.velocity[wrist_yaw_index]
-        if abs(wrist_yaw_vel) > 1e-3:
-            self.redis_client.set("music::4", "play")
-        else:
-            self.redis_client.set("music::4", "stop")
+        if "joint_wrist_yaw" in msg.name:
+            wrist_yaw_index = msg.name.index("joint_wrist_yaw")
+            wrist_yaw_vel = msg.velocity[wrist_yaw_index]
+            if abs(wrist_yaw_vel) > 1e-3:
+                self.redis_client.set("music::4", "play")
+            else:
+                self.redis_client.set("music::4", "stop")
 
-        wrist_pitch_index = msg.name.index("joint_wrist_pitch")
-        wrist_pitch_vel = msg.velocity[wrist_pitch_index]
-        if abs(wrist_pitch_vel) > 1e-3:
-            self.redis_client.set("music::5", "play")
-        else:
-            self.redis_client.set("music::5", "stop")
+        if "joint_wrist_pitch" in msg.name:
+            wrist_pitch_index = msg.name.index("joint_wrist_pitch")
+            wrist_pitch_vel = msg.velocity[wrist_pitch_index]
+            if abs(wrist_pitch_vel) > 1e-3:
+                self.redis_client.set("music::5", "play")
+            else:
+                self.redis_client.set("music::5", "stop")
 
         
