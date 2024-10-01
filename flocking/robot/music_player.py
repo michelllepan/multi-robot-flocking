@@ -9,8 +9,10 @@ REDIS_PORT = "6379"
 
 class MusicPlayer:
 
-    def __init__(self):
+    def __init__(self, robot_id):
         super().__init__()
+        robot_name = "robot_" + str(robot_id)
+
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         self.players = {
             0: vlc.MediaPlayer("sounds/base.mp3"),
@@ -21,6 +23,7 @@ class MusicPlayer:
             5: vlc.MediaPlayer("sounds/arm_j6_hand.mp3"),
             6: vlc.MediaPlayer("sounds/gripper.mp3"),
         }
+        self.music_key_prefix = robot_name + "::music::"
 
     def play(self, sound):
         p = self.players[sound]
@@ -35,7 +38,7 @@ class MusicPlayer:
 
     def update(self):
         for i in self.players:
-            play_str = self.redis_client.get(f"music::{i}")
+            play_str = self.redis_client.get(self.music_key_prefix + str(i))
             if play_str is None: continue
 
             play = play_str.decode("utf-8")
