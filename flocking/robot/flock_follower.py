@@ -209,7 +209,7 @@ class FlockFollower(Node):
 
     def move_arm(self):
         if self.arm is None:
-            return {}
+            return [], [], []
 
         if self.obstacle_side < 0.75:
             retract = {
