@@ -47,6 +47,11 @@ class FlockPlanner:
         self.read_redis()
 
         # Boids setup
+        while len(self.poses) != len(self.robots):
+            print("waiting for robot poses")
+            time.sleep(0.5)
+            self.read_redis()
+
         robot_starts = np.array([[self.poses[r].x, self.poses[r].y] for r in self.robots])
         self.boids_runner = BoidsRunner(
             num_robots=len(robots),

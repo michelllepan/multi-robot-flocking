@@ -65,9 +65,12 @@ class Visualizer:
                 self.humans[r] = humans
 
             image_data = self.redis_client.get(self.redis_keys[r]["image"])
-            image = Image.open(BytesIO(image_data))
-            image_array = np.array(image)
-            image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+            if image_data is None:
+                image_array = np.zeros((640, 360, 3))
+            else:
+                image = Image.open(BytesIO(image_data))
+                image_array = np.array(image)
+                image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
             self.images[r] = image_array
 
         human_string = self.redis_client.get(self.filtered_human_key)
@@ -89,7 +92,7 @@ class Visualizer:
     @property
     def human_candidate_positions(self):
         to_concat = [self.humans[r].coords 
-                     for r in self.robots if self.humans[r].coords]
+                     for r in self.robots if (r in self.humans and self.humans[r].coords)]
         if not to_concat: return None
         return np.concatenate([
             self.humans[r].coords
