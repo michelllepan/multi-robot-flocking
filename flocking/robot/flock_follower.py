@@ -28,7 +28,7 @@ LIN_VEL_MAX = 0.3
 ANG_VEL_SCALE = 0.6
 ANG_VEL_MAX = 1.0
 
-REDIS_HOST = "10.36.166.15"
+REDIS_HOST = "192.168.1.150"
 REDIS_PORT = "6379"
 
 
@@ -120,7 +120,6 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_base(self):
-        # return
         if self.pose is None or self.goal is None: return
         if self.obstacle_front < 0.75:
             if self.obstacle_back < 0.5:

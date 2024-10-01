@@ -18,7 +18,7 @@ from flocking.humans import HumanTracker
 from flocking.utils import Pose
 
 
-REDIS_HOST = "10.36.166.15"
+REDIS_HOST = "192.168.1.150"
 REDIS_PORT = "6379"
 
 class StatePublisher(Node):
