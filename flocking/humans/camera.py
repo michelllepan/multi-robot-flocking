@@ -1,4 +1,7 @@
+import cv2
+import numpy as np
 import pyrealsense2 as rs
+import scipy
 
 
 class RealSenseCamera:
@@ -59,6 +62,33 @@ class RealSenseCamera:
         depth_frame = frame
 
         return depth_frame, color_frame
+    
+    def convert_to_array(self, depth_frame, color_frame):
+        depth_image = np.asanyarray(depth_frame.get_data())
+        color_image = np.asanyarray(color_frame.get_data())
+
+        # rotate images
+        depth_image = np.rot90(depth_image, 3)
+        color_image = np.rot90(color_image, 3)
+
+        depth_image = scipy.signal.convolve2d(
+            in1=depth_image,
+            in2=np.ones((3, 3)) / 9,
+            mode="same",
+        )
+        depth_colormap = cv2.applyColorMap(
+            cv2.convertScaleAbs(depth_image, alpha=0.03),cv2.COLORMAP_JET)
+        
+        depth_colormap_dim = depth_colormap.shape
+        color_colormap_dim = color_image.shape
+
+        if depth_colormap_dim != color_colormap_dim:
+            color_image = cv2.resize(
+                color_image, 
+                dsize=(depth_colormap_dim[1], depth_colormap_dim[0]),
+                interpolation=cv2.INTER_AREA)
+
+        return depth_image, color_image
         
     def __del__(self):
         self.pipeline.stop()

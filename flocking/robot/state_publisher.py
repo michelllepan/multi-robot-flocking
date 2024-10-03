@@ -14,7 +14,7 @@ from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
-from flocking.humans import HumanTracker
+from flocking.humans import RealSenseCamera
 from flocking.utils import Pose
 
 
@@ -37,7 +37,8 @@ class StatePublisher(Node):
         self.obstacles_back_key = robot_name + "::obstacles::back"
         self.obstacles_side_key = robot_name + "::obstacles::side"
         self.humans_key = robot_name + "::humans"
-        self.image_key = robot_name + "::image" 
+        self.color_image_key = robot_name + "::color_image"
+        self.depth_image_key = robot_name + "::depth_image" 
         self.head_key = robot_name + "::head"
         self.music_key_prefix = robot_name + "::music::"
 
@@ -55,18 +56,14 @@ class StatePublisher(Node):
         self.scan_sub = self.create_subscription(
             LaserScan, "/scan", self.publish_obstacles, 1)
 
-        # humans
-        def human_callback(humans, image):
-            self.publish_humans(humans)
-            self.publish_image(image)
-
         # head
         self.joint_states_sub = self.create_subscription(
             JointState, '/joint_states', self.publish_head, 1)
         self.head = None
 
-        self.human_tracker = HumanTracker(human_callback=human_callback)
-        self.human_timer = self.create_timer(0.25, self.human_tracker.process_frame)
+        # camera
+        self.camera = RealSenseCamera()
+        self.camera_timer = self.create_timer(0.25, self.publish_image)
 
         # music
         self.music_base_sub = self.create_subscription(
@@ -129,40 +126,48 @@ class StatePublisher(Node):
         new_ranges = [r if abs(x) < 0.5 else np.inf for r,x in zip(msg.ranges, points)]
         self.redis_client.set(self.obstacles_side_key, str(min(new_ranges)))
 
-    def publish_humans(self, detections_robot):
-        if self.pose is None or self.head is None or detections_robot is None:
-            return
-        elif len(detections_robot) == 0:
-            self.redis_client.set(self.humans_key, str(detections_robot))
-            return
+    # def publish_humans(self, detections_robot):
+    #     if self.pose is None or self.head is None or detections_robot is None:
+    #         return
+    #     elif len(detections_robot) == 0:
+    #         self.redis_client.set(self.humans_key, str(detections_robot))
+    #         return
 
-        detections_robot = np.array(detections_robot)
-        if detections_robot.ndim < 2:
-            detections_robot = np.expand_dims(detections_robot, axis=0)
+    #     detections_robot = np.array(detections_robot)
+    #     if detections_robot.ndim < 2:
+    #         detections_robot = np.expand_dims(detections_robot, axis=0)
 
-        # add z coordinate for rotation
-        z = np.zeros((detections_robot.shape[0], 1))
-        detections_robot = np.hstack((detections_robot, z))
+    #     # add z coordinate for rotation
+    #     z = np.zeros((detections_robot.shape[0], 1))
+    #     detections_robot = np.hstack((detections_robot, z))
 
-        # rotation
-        rot = Rotation.from_euler("z", self.pose.h + self.head)
-        detections_world = rot.apply(detections_robot)
-        detections_world = detections_world[:, :2]
+    #     # rotation
+    #     rot = Rotation.from_euler("z", self.pose.h + self.head)
+    #     detections_world = rot.apply(detections_robot)
+    #     detections_world = detections_world[:, :2]
 
-        # translation
-        detections_world += np.array([self.pose.x, self.pose.y])
+    #     # translation
+    #     detections_world += np.array([self.pose.x, self.pose.y])
 
-        detections_world = detections_world.tolist()
-        self.redis_client.set(self.humans_key, str(detections_world))
+    #     detections_world = detections_world.tolist()
+    #     self.redis_client.set(self.humans_key, str(detections_world))
 
-    def publish_image(self, image):
-        output = BytesIO()
-        image = image[:,:,::-1] # switch order of color channels
-        image = Image.fromarray(image.astype("uint8"), "RGB")
-        image.save(output, format="png")
+    def publish_image(self):
+        depth_frame, color_frame = self.camera.get_frames()
+        depth_image, color_image = self.camera.convert_to_array(depth_frame, color_frame)
 
-        self.redis_client.set(self.image_key, output.getvalue())
-        output.close()
+        color_output = BytesIO()
+        color_image = color_image[:,:,::-1] # switch order of color channels
+        color_image = Image.fromarray(color_image.astype("uint8"), "RGB")
+        color_image.save(color_output, format="png")
+        self.redis_client.set(self.color_image_key, color_output.getvalue())
+        color_output.close()
+
+        depth_output = BytesIO()
+        depth_image = Image.fromarray(depth_image.astype("uint8"), "L")
+        depth_image.save(depth_output, format="png")
+        self.redis_client.set(self.depth_image_key, depth_output.getvalue())
+        depth_output.close()
 
     def publish_head(self, msg: JointState):
         index = msg.name.index("joint_head_pan")
