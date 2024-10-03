@@ -14,20 +14,29 @@ IMAGE_SIZE = (360, 640)
 
 class CameraFeed:
 
-    def __init__(self, robots):
+    def __init__(self, robots, depth=False):
         super().__init__()
         self.robots = robots
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+        self.depth = depth
         
         self.image_keys = {}
         for r in self.robots:
-            self.image_keys[r] = "robot_" + str(r) + "::image"
+            if self.depth:
+                self.image_keys[r] = "robot_" + str(r) + "::depth_image"
+            else:
+                self.image_keys[r] = "robot_" + str(r) + "::color_image"
 
     def get_image(self, robot):
         image_data = self.redis_client.get(self.image_keys[robot])
-        image = Image.open(BytesIO(image_data))
-        image_array = np.array(image)
-        image_array = image_array[:,:,::-1]
+        if self.depth:
+            image_array = np.load(BytesIO(image_data), allow_pickle=False)
+            image_array = cv2.applyColorMap(
+                cv2.convertScaleAbs(image_array, alpha=0.03), cv2.COLORMAP_JET)
+        else:
+            image = Image.open(BytesIO(image_data))
+            image_array = np.array(image)
+            image_array = image_array[:,:,::-1]
         return image_array
                 
     def display_feed(self):
@@ -41,8 +50,9 @@ class CameraFeed:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--robots", "-r", nargs="+", type=int, required=True)
+    parser.add_argument("--depth", "-d", action="store_true")
     args = parser.parse_args()
 
-    feed = CameraFeed(robots=tuple(args.robots))
+    feed = CameraFeed(robots=tuple(args.robots), depth=args.depth)
     feed.display_feed()
 

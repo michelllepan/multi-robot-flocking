@@ -164,8 +164,7 @@ class StatePublisher(Node):
         color_output.close()
 
         depth_output = BytesIO()
-        depth_image = Image.fromarray(depth_image.astype("uint8"), "L")
-        depth_image.save(depth_output, format="png")
+        np.save(depth_output, depth_image, allow_pickle=False)
         self.redis_client.set(self.depth_image_key, depth_output.getvalue())
         depth_output.close()
 
