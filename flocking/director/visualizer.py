@@ -70,7 +70,7 @@ class Visualizer:
             else:
                 image = Image.open(BytesIO(image_data))
                 image_array = np.array(image)
-                image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+                image_array = cv2.resize(image_array, (360, 640), interpolation=cv2.INTER_AREA)
             self.images[r] = image_array
 
         human_string = self.redis_client.get(self.filtered_human_key)
