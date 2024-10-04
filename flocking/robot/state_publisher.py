@@ -2,10 +2,12 @@ import os
 import time
 from io import BytesIO
 
+import cv2
 import numpy as np
 import redis
 from PIL import Image
 from scipy.spatial.transform import Rotation
+from ultralytics import YOLO
 
 import rclpy
 from rclpy.node import Node
@@ -16,6 +18,7 @@ from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
 from flocking.humans import RealSenseCamera
+from flocking.humans.utils import get_depth_at_pixel
 from flocking.utils import Pose
 
 
@@ -62,9 +65,12 @@ class StatePublisher(Node):
             JointState, '/joint_states', self.publish_head, 1)
         self.head = None
 
-        # camera
-        self.camera = RealSenseCamera()
+        # person detection
+        self.camera = RealSenseCamera(width=640, height=360)
         self.camera_timer = self.create_timer(0.25, self.publish_image)
+        self.yolo = YOLO("models/yolov5nu.pt")
+        self.yolo_timer = self.create_timer(0.08, self.publish_humans)
+        self.yolo_threshold = 0.5
 
         # music
         self.music_base_sub = self.create_subscription(
@@ -161,6 +167,61 @@ class StatePublisher(Node):
 
     #     detections_world = detections_world.tolist()
     #     self.redis_client.set(self.humans_key, str(detections_world))
+
+    def publish_humans(self):
+        try:
+            if self.pose is None or self.head is None:
+                return
+            
+            depth_frame, color_frame = self.camera.get_frames()
+            depth_image, color_image = self.camera.convert_to_array(depth_frame, color_frame)
+            height, width, c = color_image.shape
+
+            results = self.yolo([cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)])
+
+            cls = results[0].boxes.cls
+            conf = results[0].boxes.conf
+            xyxy = results[0].boxes.xyxyn
+
+            detections_robot = []
+            for i in range(len(cls)):
+                if cls[i] != 0 or conf[i] < self.yolo_threshold: # class 0 is "person"
+                    continue
+
+                x_img = (xyxy[i][0] + xyxy[i][2]) / 2
+                y_img = (xyxy[i][1] + xyxy[i][3]) / 2
+
+                depth = get_depth_at_pixel(depth_image, x_img, y_img)
+                if depth is None:
+                    continue
+
+                x_robot = depth
+                y_robot = width * (0.5 - x_img) * (depth / 480)
+                detections_robot.append((x_robot, y_robot))
+
+            if len(detections_robot) == 0:
+                self.redis_client.set(self.humans_key, str(detections_robot))
+                return
+            
+            detections_robot = np.array(detections_robot)
+
+            # add z coordinate for rotation
+            z = np.zeros((detections_robot.shape[0], 1))
+            detections_robot = np.hstack((detections_robot, z))
+
+            # rotation
+            rot = Rotation.from_euler("z", self.pose.h + self.head)
+            detections_world = rot.apply(detections_robot)
+            detections_world = detections_world[:, :2]
+
+            # translation
+            detections_world += np.array([self.pose.x, self.pose.y])
+
+            detections_world = detections_world.tolist()
+            self.redis_client.set(self.humans_key, str(detections_world))
+
+        except redis.exceptions.ConnectionError as e:
+            print(e, f" at time {time.time() : .0f}")
 
     def publish_image(self):
         try:
