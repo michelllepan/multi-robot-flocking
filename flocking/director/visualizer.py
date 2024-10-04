@@ -40,7 +40,7 @@ class Visualizer:
             self.redis_keys[r]["goal"] = "robot_" + str(r) + "::goal"
             self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
             self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
-            self.redis_keys[r]["image"] = "robot_" + str(r) + "::image"
+            self.redis_keys[r]["image"] = "robot_" + str(r) + "::color_image"
 
             self.goals[r] = Goal(x=-1.0, y=-1.0)
             self.poses[r] = Pose(x=-1.0, y=-1.0, h=0.0)
@@ -66,7 +66,7 @@ class Visualizer:
 
             image_data = self.redis_client.get(self.redis_keys[r]["image"])
             if image_data is None:
-                image_array = np.zeros((640, 360, 3))
+                image_array = np.zeros((640, 360, 3)).astype(np.uint8)
             else:
                 image = Image.open(BytesIO(image_data))
                 image_array = np.array(image)
