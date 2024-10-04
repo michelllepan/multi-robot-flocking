@@ -2,13 +2,15 @@ import argparse
 import time
 from multiprocessing import Process
 
-from flocking.director import FlockPlanner, Visualizer
+from flocking.director import ArmMover, FlockPlanner, Visualizer
 
 
 def run_planner(robots):
     director = FlockPlanner(robots=robots)
+    arm_mover = ArmMover(robots=robots)
     while True:
         director.step_flocking()
+        arm_mover.send_arm_commands()
         time.sleep(0.1) 
 
 def run_visualizer(robots):
