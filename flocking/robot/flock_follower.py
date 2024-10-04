@@ -1,5 +1,6 @@
 import numpy as np
 import redis
+import time
 from scipy.spatial.transform import Rotation
 
 import rclpy
@@ -82,26 +83,29 @@ class FlockFollower(Node):
             sys.exit()
         
     def read_redis(self):
-        pose_str = self.redis_client.get(self.pose_key)
-        self.pose = Pose.from_string(pose_str)
+        try:
+            pose_str = self.redis_client.get(self.pose_key)
+            self.pose = Pose.from_string(pose_str)
 
-        goal_str = self.redis_client.get(self.goal_key)
-        self.goal = Goal.from_string(goal_str)
+            goal_str = self.redis_client.get(self.goal_key)
+            self.goal = Goal.from_string(goal_str)
 
-        obstacle_str = self.redis_client.get(self.obstacles_front_key)
-        self.obstacle_front = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
+            obstacle_str = self.redis_client.get(self.obstacles_front_key)
+            self.obstacle_front = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
 
-        obstacle_str = self.redis_client.get(self.obstacles_back_key)
-        self.obstacle_back = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
+            obstacle_str = self.redis_client.get(self.obstacles_back_key)
+            self.obstacle_back = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
 
-        obstacle_str = self.redis_client.get(self.obstacles_side_key)
-        self.obstacle_side = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
+            obstacle_str = self.redis_client.get(self.obstacles_side_key)
+            self.obstacle_side = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
 
-        look_str = self.redis_client.get(self.look_key)
-        self.look = eval(look_str) if look_str else None
+            look_str = self.redis_client.get(self.look_key)
+            self.look = eval(look_str) if look_str else None
 
-        arm_str = self.redis_client.get(self.arm_key)
-        self.arm = eval(arm_str) if arm_str else None
+            arm_str = self.redis_client.get(self.arm_key)
+            self.arm = eval(arm_str) if arm_str else None
+        except redis.exceptions.ConnectionError as e:
+            print(e, f" at time {time.time() : .0f}")
 
         self.print_info()
 

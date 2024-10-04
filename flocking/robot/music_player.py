@@ -37,15 +37,18 @@ class MusicPlayer:
             p.stop()
 
     def update(self):
-        for i in self.players:
-            play_str = self.redis_client.get(self.music_key_prefix + str(i))
-            if play_str is None: continue
+        try:
+            for i in self.players:
+                play_str = self.redis_client.get(self.music_key_prefix + str(i))
+                if play_str is None: continue
 
-            play = play_str.decode("utf-8")
-            if play == "play":
-                self.play(i)
-            else:
-                self.stop(i)
+                play = play_str.decode("utf-8")
+                if play == "play":
+                    self.play(i)
+                else:
+                    self.stop(i)
+        except redis.exceptions.ConnectionError as e:
+            print(e, f" at time {time.time() : .0f}")
 
 
 if __name__ == "__main__":
