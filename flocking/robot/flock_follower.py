@@ -21,7 +21,7 @@ from flocking.utils import Goal, Pose
 
 
 GOAL_TOLERANCE = 0.05
-OBS_TOLERANCE = 0.5
+OBS_TOLERANCE = 0.75
 
 LIN_VEL_SCALE = 1.5
 LIN_VEL_MAX = 0.3
@@ -125,8 +125,8 @@ class FlockFollower(Node):
 
     def move_base(self):
         if self.pose is None or self.goal is None: return
-        if self.obstacle_front < 0.75:
-            if self.obstacle_back < 0.5:
+        if self.obstacle_front < 1.0:
+            if self.obstacle_back < 0.75:
                 self.twist.linear.x = 0.0
                 self.twist.angular.z = 0.0
                 self.vel_pub.publish(self.twist)
@@ -177,39 +177,35 @@ class FlockFollower(Node):
         self.vel_pub.publish(self.twist)
 
     def move_joints(self):
-        # head_pos, head_vel = self.move_head()
-        joint_names, pos, vel = self.move_arm()
+        joint_names1, pos1, vel1 = self.move_head()
+        joint_names2, pos2, vel2 = self.move_arm()
 
         point = JointTrajectoryPoint()
         point.time_from_start = Duration(seconds=1.0).to_msg()
-        point.positions = pos
-        point.velocities = vel
+        point.positions = pos1 + pos2
+        point.velocities = vel1 + vel2
 
         trajectory_goal = FollowJointTrajectory.Goal()
-        trajectory_goal.trajectory.joint_names = joint_names
+        trajectory_goal.trajectory.joint_names = joint_names1 + joint_names2
         trajectory_goal.trajectory.points = [point]
         self.trajectory_client.send_goal_async(trajectory_goal)
 
     def move_head(self):
         if self.look is None or self.head is None:
-            return {}
+            return [], [], []
 
         look = self.look - self.pose.h
         look = (look + np.pi) % (2 * np.pi) - np.pi  # wrap to between -pi and pi
 
         if abs(look - self.head) < 0.1:
-            return {}
-
-        # point = JointTrajectoryPoint()
-        # point.time_from_start = Duration(seconds=10.0).to_msg()
+            return [], [], []
 
         if look - self.head < 0:
             target = max(-0.2, look - self.head)
         else:
             target = min(0.2, look - self.head)
-        # point.positions = [self.head + target]
 
-        return {"joint_head_pan": self.head + target}
+        return ["joint_head_pan"], [self.head + target], [np.tanh(2 * target)]
 
     def move_arm(self):
         if self.arm is None:
