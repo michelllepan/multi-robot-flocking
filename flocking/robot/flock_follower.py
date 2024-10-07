@@ -52,6 +52,7 @@ class FlockFollower(Node):
         self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         self.redis_timer = self.create_timer(0.005, self.read_redis)
 
+        self.flock_state_key = "state"
         self.goal_key = robot_name + "::goal"
         self.pose_key = robot_name + "::pose"
         self.obstacles_front_key = robot_name + "::obstacles::front"
@@ -61,6 +62,7 @@ class FlockFollower(Node):
         self.arm_key = robot_name + "::arm"
 
         # initialize state
+        self.flock_state = "STOP"
         self.pose = None
         self.goal = None
         self.obstacle_front = False
@@ -84,6 +86,9 @@ class FlockFollower(Node):
         
     def read_redis(self):
         try:
+            flock_state_str = self.redis_client.get(self.state_key)
+            self.flock_state = flock_state_str.decode("utf-8") if flock_state_str else "STOP"
+
             pose_str = self.redis_client.get(self.pose_key)
             self.pose = Pose.from_string(pose_str)
 
@@ -124,6 +129,7 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_base(self):
+        if self.flock_state == "STOP": return
         if self.pose is None or self.goal is None: return
         if self.obstacle_front < 1.0:
             if self.obstacle_back < 0.75:

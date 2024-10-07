@@ -35,9 +35,11 @@ class FlockPlanner:
             self.redis_keys[r]["look"] = "robot_" + str(r) + "::look"
 
         self.filtered_human_key = "filtered_human"
+        self.flock_state_key = "state"
         self.mode_key = "mode"
 
         # populate data
+        self.flock_state = "STOP"
         self.mode = "DEFAULT"
         self.goals = {}
         self.looks = {}
@@ -132,3 +134,4 @@ class FlockPlanner:
             self.redis_client.set(self.redis_keys[r]["look"], str(self.looks[r]))
 
         self.redis_client.set(self.filtered_human_key, str(self.human))
+        self.redis_client.set(self.flock_state_key, self.flock_state)
