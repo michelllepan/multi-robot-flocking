@@ -274,6 +274,7 @@ class StatePublisher(Node):
             angular = msg.angular.z
             if abs(angular) > 1e-3:
                 self.redis_client.set(self.music_key_prefix + "1", "play")
+                print("playing base angular")
             else:
                 self.redis_client.set(self.music_key_prefix + "1", "stop")
         except redis.exceptions.ConnectionError as e:
@@ -305,10 +306,10 @@ class StatePublisher(Node):
                 else:
                     self.redis_client.set(self.music_key_prefix + "4", "stop")
 
-            if "joint_wrist_pitch" in msg.name:
-                wrist_pitch_index = msg.name.index("joint_wrist_pitch")
-                wrist_pitch_vel = msg.velocity[wrist_pitch_index]
-                if abs(wrist_pitch_vel) > 1e-3:
+            if "joint_head_pan" in msg.name:
+                head_pan_index = msg.name.index("joint_head_pan")
+                head_pan_vel = msg.velocity[head_pan_index]
+                if abs(head_pan_vel) > 1e-3:
                     self.redis_client.set(self.music_key_prefix + "5", "play")
                 else:
                     self.redis_client.set(self.music_key_prefix + "5", "stop")
