@@ -86,7 +86,7 @@ class FlockFollower(Node):
         
     def read_redis(self):
         try:
-            flock_state_str = self.redis_client.get(self.state_key)
+            flock_state_str = self.redis_client.get(self.flock_state_key)
             self.flock_state = flock_state_str.decode("utf-8") if flock_state_str else "STOP"
 
             pose_str = self.redis_client.get(self.pose_key)
@@ -129,7 +129,8 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_base(self):
-        if self.flock_state == "STOP": return
+        if self.flock_state == "STOP":
+            return
         if self.pose is None or self.goal is None: return
         if self.obstacle_front < 1.0:
             if self.obstacle_back < 0.75:
@@ -139,7 +140,7 @@ class FlockFollower(Node):
                 print("ROBOT BLOCKED: STOPPING !!!!1!!11!111!!!!!!!!!")
                 return
             else:
-                self.twist.linear.x = -0.1
+                self.twist.linear.x = -0.1 
                 self.twist.angular.z = 0.0
                 self.vel_pub.publish(self.twist)
                 print("BACKING UP")
@@ -203,15 +204,15 @@ class FlockFollower(Node):
         look = self.look - self.pose.h
         look = (look + np.pi) % (2 * np.pi) - np.pi  # wrap to between -pi and pi
 
-        if abs(look - self.head) < 0.1:
+        if abs(look - self.head) < 0.05:
             return [], [], []
 
         if look - self.head < 0:
-            target = max(-0.2, look - self.head)
+            target = max(-0.3, look - self.head)
         else:
-            target = min(0.2, look - self.head)
+            target = min(0.3, look - self.head)
 
-        return ["joint_head_pan"], [self.head + target], [np.tanh(2 * target)]
+        return ["joint_head_pan"], [self.head + target], [0.15 * np.tanh(30 * abs(target) - 3.5) + 0.15]
 
     def move_arm(self):
         if self.arm is None:
