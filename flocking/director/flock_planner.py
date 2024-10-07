@@ -90,7 +90,7 @@ class FlockPlanner:
         for i in range(len(self.robots)):
             r = self.robots[i]
             t = self.boids_runner.target_positions[i]
-            self.goals[r] = Goal(x=float(t[0]), y=float(t[1]))
+            self.goals[r] = Goal(x=float(np.clip(t[0], 0, X_MAX)), y=float(np.clip(t[1], 0, Y_MAX)))
 
         # update head targets
         for r in self.robots:
