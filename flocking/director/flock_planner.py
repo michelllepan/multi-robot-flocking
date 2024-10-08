@@ -29,6 +29,7 @@ class FlockPlanner:
         for r in self.robots:
             self.redis_keys[r] = {}
             self.redis_keys[r]["goal"] = "robot_" + str(r) + "::goal"
+            self.redis_keys[r]["carrot"] = "robot_" + str(r) + "::carrot"
             self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
             self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
             self.redis_keys[r]["head"] = "robot_" + str(r) + "::head"
@@ -42,6 +43,7 @@ class FlockPlanner:
         self.flock_state = "STOP"
         self.mode = "DEFAULT"
         self.goals = {}
+        self.carrots = {}
         self.looks = {}
         self.poses = {}
         self.humans = {}
@@ -87,10 +89,19 @@ class FlockPlanner:
 
         # update base targets
         self.boids_runner.update_targets(steps=2, mode=self.mode)
+        carrots = self.boids_runner._get_carrots()
         for i in range(len(self.robots)):
             r = self.robots[i]
             t = self.boids_runner.target_positions[i]
-            self.goals[r] = Goal(x=float(np.clip(t[0], 0, X_MAX)), y=float(np.clip(t[1], 0, Y_MAX)))
+            x = float(np.clip(t[0], 0, X_MAX))
+            y = float(np.clip(t[1], 0, Y_MAX))
+            self.goals[r] = Goal(x=x, y=y)
+
+            # update carrots if robots are circling
+            if self.mode == "CIRCLE":
+                self.carrots[r] = Goal(x=float(carrots[i][0]), y=float(carrots[i][1]))
+            else:
+                self.carrots[r] = None
 
         # update head targets
         for r in self.robots:
@@ -132,6 +143,7 @@ class FlockPlanner:
             if r not in self.goals: continue
             self.redis_client.set(self.redis_keys[r]["goal"], str(self.goals[r]))
             self.redis_client.set(self.redis_keys[r]["look"], str(self.looks[r]))
+            self.redis_client.set(self.redis_keys[r]["carrot"], str(self.carrots[r]))
 
         self.redis_client.set(self.filtered_human_key, str(self.human))
         # self.redis_client.set(self.flock_state_key, self.flock_state)

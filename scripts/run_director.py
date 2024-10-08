@@ -11,7 +11,7 @@ def run_planner(robots):
     while True:
         director.step_flocking()
         arm_mover.send_arm_commands()
-        time.sleep(0.1) 
+        time.sleep(0.02) 
 
 def run_visualizer(robots):
     visualizer = Visualizer(robots=robots)

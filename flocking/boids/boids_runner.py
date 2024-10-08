@@ -34,9 +34,6 @@ class BoidsRunner:
         self.last_time = time.time()
         self.current_time = time.time()
         
-        self.publish_carrots = publish_carrots
-        if self.publish_carrots:
-            pass
         self.carrot_positions = self._get_carrots()
         self.step_scale = step_scale
 
@@ -86,13 +83,6 @@ class BoidsRunner:
                 timestamp=self.current_time,
                 num_robots=self.num_robots)
             carrots.append(pos)
-
-            if self.publish_carrots:
-                point = Point()
-                point.x = pos[0]
-                point.y = pos[1]
-                self.carrot_pubs[robot_id].publish(point)
-                
         return np.vstack(carrots)
     
     def _boids_static(
@@ -216,7 +206,6 @@ class BoidsRunner:
         current_time = self.current_time
         last_time = self.last_time
 
-        # TODO: add movement to human
         for i in range(steps):
             targets = np.zeros_like(positions)
             for robot_id in range(self.num_robots):
@@ -240,9 +229,3 @@ class BoidsRunner:
             last_time, current_time = current_time, current_time + 0.1
 
         self.target_positions = targets
-
-        # for robot_id in range(self.num_robots):
-        #     distance_vec = self._boids(robot_id, mode)
-        #     direction_vec = clip_by_norm(distance_vec, self.step_scale)
-        #     self.target_positions[robot_id] = (self.robot_positions[robot_id] +
-        #                                        direction_vec)

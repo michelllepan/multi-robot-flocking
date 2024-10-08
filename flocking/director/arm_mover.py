@@ -33,6 +33,9 @@ class ArmMover:
             # "gripper_finger_right": (0.5 if gripper_open else 0.0, 0.5),
             # "gripper_aperture": (0.5 if gripper_open else 0.0, 0.5),
         }
+        self.redis_client.set("robot_1::arm", str(arm_dict))
+        self.redis_client.set("robot_2::arm", str(arm_dict))
+        self.redis_client.set("robot_3::arm", str(arm_dict))
         self.redis_client.set("robot_4::arm", str(arm_dict))
 
     def oscillate(self):

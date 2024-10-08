@@ -17,6 +17,7 @@ REDIS_PORT = "6379"
 
 GOAL_COLOR = "mediumpurple"
 ROBOT_COLOR = "steelblue"
+CARROT_COLOR = "coral"
 HUMAN_COLOR = "seagreen"
 HUMAN_CANDIDATE_COLOR = "darkseagreen"
 
@@ -30,6 +31,7 @@ class Visualizer:
         self.redis_keys = {}
 
         self.goals = {}
+        self.carrots = {}
         self.poses = {}
         self.images = {}
         self.humans = {}
@@ -38,6 +40,7 @@ class Visualizer:
         for r in self.robots:
             self.redis_keys[r] = {}
             self.redis_keys[r]["goal"] = "robot_" + str(r) + "::goal"
+            self.redis_keys[r]["carrot"] = "robot_" + str(r) + "::carrot"
             self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
             self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
             self.redis_keys[r]["image"] = "robot_" + str(r) + "::color_image"
@@ -58,6 +61,10 @@ class Visualizer:
             goal = Goal.from_string(goal_string)
             if goal is not None:
                 self.goals[r] = goal
+
+            carrot_string = self.redis_client.get(self.redis_keys[r]["carrot"])
+            carrot = Goal.from_string(carrot_string)
+            self.carrots[r] = carrot
 
             human_string = self.redis_client.get(self.redis_keys[r]["humans"])
             humans = Humans.from_string(human_string)
@@ -87,6 +94,12 @@ class Visualizer:
     def goal_positions(self):
         return np.array([
             [self.goals[r].x, self.goals[r].y]
+            for r in self.robots ])
+
+    @property
+    def carrot_positions(self):
+        return np.array([
+            [self.carrots[r].x, self.carrots[r].y] if self.carrots[r] else [-1, -1]
             for r in self.robots ])
     
     @property
@@ -120,6 +133,11 @@ class Visualizer:
                     x=self.goal_positions[i][0],
                     y=self.goal_positions[i][1],
                     c=GOAL_COLOR,
+                    marker=f"${r}$")
+                ax.scatter(
+                    x=self.carrot_positions[i][0],
+                    y=self.carrot_positions[i][1],
+                    c=CARROT_COLOR,
                     marker=f"${r}$")
                 
             if self.human_candidate_positions is not None:
