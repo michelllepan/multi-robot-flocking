@@ -15,7 +15,25 @@ class ArmMover:
         # TODO: check robots
 
     def send_arm_commands(self):
-        self.oscillate()
+        flock_state_str = self.redis_client.get("state")
+        flock_state = flock_state_str.decode("utf-8") if flock_state_str else "STOP"
+
+        if flock_state == "GESTURE_CLAP":
+            self.clap()
+        else:
+            self.oscillate()
+
+    def clap(self):
+        gripper_open = int(time.time()) % 2 == 0
+        # print(gripper_open)
+        # gripper_open = False
+        arm_dict = {
+            "lift": (0.5, 0.03),
+            "gripper_finger_left": (0.2 if gripper_open else 0.0, 30.0),
+            # "gripper_finger_right": (0.5 if gripper_open else 0.0, 0.5),
+            # "gripper_aperture": (0.5 if gripper_open else 0.0, 0.5),
+        }
+        self.redis_client.set("robot_4::arm", str(arm_dict))
 
     def oscillate(self):
         lift = 0.7 + 0.15 * np.sin(time.time() * np.pi * 2 / 10 + 8)

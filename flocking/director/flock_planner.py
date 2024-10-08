@@ -13,7 +13,7 @@ REDIS_HOST = "localhost"
 # REDIS_HOST = "10.5.90.8"
 REDIS_PORT = "6379"
 
-X_MAX = 4
+X_MAX = 9
 Y_MAX = 4
 
 class FlockPlanner:
@@ -134,4 +134,4 @@ class FlockPlanner:
             self.redis_client.set(self.redis_keys[r]["look"], str(self.looks[r]))
 
         self.redis_client.set(self.filtered_human_key, str(self.human))
-        self.redis_client.set(self.flock_state_key, self.flock_state)
+        # self.redis_client.set(self.flock_state_key, self.flock_state)

@@ -106,7 +106,7 @@ class Visualizer:
 
     def show_plot(self):
         while True:
-            fig, ax = plt.subplots(figsize=(5,5))
+            fig, ax = plt.subplots(figsize=(10,5))
             self.read_redis()
 
             for i in range(self.num_robots):
@@ -135,8 +135,8 @@ class Visualizer:
                     c=HUMAN_COLOR,
                     marker="$H$")
             
-            ax.set_xlim(-1, 8)
-            ax.set_ylim(-1, 6)
+            ax.set_xlim(-1, 10)
+            ax.set_ylim(-1, 5)
 
             robot_patch = Line2D([0], [0], marker="o", color=ROBOT_COLOR, linestyle="None", label="robot")
             goal_patch = Line2D([0], [0], marker="o", color=GOAL_COLOR, linestyle="None", label="target")
@@ -146,7 +146,7 @@ class Visualizer:
             fig.canvas.draw()
             fig_array = np.array(fig.canvas.renderer._renderer)
             fig_array = cv2.cvtColor(fig_array, cv2.COLOR_RGB2BGR)
-            fig_array = cv2.resize(fig_array, (640, 640), interpolation=cv2.INTER_AREA)
+            fig_array = cv2.resize(fig_array, (1280, 640), interpolation=cv2.INTER_AREA)
             plt.close(fig)
 
             images = [self.images[r] for r in self.robots]
