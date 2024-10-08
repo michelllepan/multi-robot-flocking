@@ -96,13 +96,13 @@ class FlockFollower(Node):
             self.goal = Goal.from_string(goal_str)
 
             obstacle_str = self.redis_client.get(self.obstacles_front_key)
-            self.obstacle_front = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
+            self.obstacle_front = eval(obstacle_str) if obstacle_str and obstacle_str != b"inf" else float("inf")
 
             obstacle_str = self.redis_client.get(self.obstacles_back_key)
-            self.obstacle_back = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
+            self.obstacle_back = eval(obstacle_str) if obstacle_str and obstacle_str != b"inf" else float("inf")
 
             obstacle_str = self.redis_client.get(self.obstacles_side_key)
-            self.obstacle_side = eval(obstacle_str) if obstacle_str != b"inf" else float("inf")
+            self.obstacle_side = eval(obstacle_str) if obstacle_str and obstacle_str != b"inf" else float("inf")
 
             look_str = self.redis_client.get(self.look_key)
             self.look = eval(look_str) if look_str else None
@@ -129,9 +129,23 @@ class FlockFollower(Node):
                 abs(self.pose.y - self.goal.y) < GOAL_TOLERANCE)
 
     def move_base(self):
-        if self.flock_state == "STOP":
+        if self.pose is None or self.goal is None:
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = 0.0
+            self.vel_pub.publish(self.twist)
             return
-        if self.pose is None or self.goal is None: return
+        
+        if self.flock_state == "STOP":
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = 0.0
+            self.vel_pub.publish(self.twist)
+            return
+        elif self.flock_state == "GESTURE_SPIN":
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = 1.0
+            self.vel_pub.publish(self.twist)
+            return
+        
         if self.obstacle_front < 1.0:
             if self.obstacle_back < 0.75:
                 self.twist.linear.x = 0.0
@@ -163,7 +177,7 @@ class FlockFollower(Node):
         # calculate linear velocity
         linear_speed = np.tanh(LIN_VEL_SCALE * np.linalg.norm(goal_vec))
         if theta < np.pi / 2:
-            self.twist.linear.x = min(linear_speed, 0.3)
+            self.twist.linear.x = min(linear_speed, 0.29)
         else:
             self.twist.linear.x = 0.0
 
