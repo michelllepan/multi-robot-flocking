@@ -146,7 +146,8 @@ class FlockFollower(Node):
             self.vel_pub.publish(self.twist)
             return
         
-        if self.obstacle_front < 1.0:
+        max_lin_speed = 0.3
+        if self.obstacle_front < 0.75:
             if self.obstacle_back < 0.75:
                 self.twist.linear.x = 0.0
                 self.twist.angular.z = 0.0
@@ -159,7 +160,23 @@ class FlockFollower(Node):
                 self.vel_pub.publish(self.twist)
                 print("BACKING UP")
                 return 
-        if self.check_at_goal(): return
+        elif self.obstacle_front < 1.5:
+            max_lin_speed = 0.1
+
+        if self.check_at_goal():
+            self.twist.linear.x = 0.0
+            self.twist.angular.z = 0.0
+            self.vel_pub.publish(self.twist)
+            return
+            # if self.goal.h is not None and abs(self.pose.h - self.goal.h) > 0.05:
+            #     self.twist.linear.x = 0.0
+            #     self.twist.angular.z = 0.1
+            #     self.vel_pub.publish(self.twist)
+            # else:
+            #     self.twist.linear.x = 0.0
+            #     self.twist.angular.z = 0.0
+            #     self.vel_pub.publish(self.twist)
+            #     return
 
         # unit vector of the heading
         heading_vec = np.array([np.cos(self.pose.h), np.sin(self.pose.h)])
@@ -175,9 +192,12 @@ class FlockFollower(Node):
                           (np.linalg.norm(heading_vec) * np.linalg.norm(goal_vec)))
 
         # calculate linear velocity
-        linear_speed = np.tanh(LIN_VEL_SCALE * np.linalg.norm(goal_vec))
+        if self.flock_state == "GOTO":
+            linear_speed = 0.15 * np.tanh(4 * np.linalg.norm(goal_vec) - 2.0) + 0.15
+        else:
+            linear_speed = 0.15 * np.tanh(30 * np.linalg.norm(goal_vec) - 4.5) + 0.15
         if theta < np.pi / 2:
-            self.twist.linear.x = min(linear_speed, 0.29)
+            self.twist.linear.x = min(linear_speed, max_lin_speed)
         else:
             self.twist.linear.x = 0.0
 
@@ -191,8 +211,6 @@ class FlockFollower(Node):
             self.twist.angular.z = -angular_speed
         elif cross < -0.01:
             self.twist.angular.z = angular_speed
-        else:
-            self.twist.angular.z = 0.0
 
         # publish twist
         self.vel_pub.publish(self.twist)
