@@ -147,11 +147,11 @@ class Visualizer:
                     c=HUMAN_CANDIDATE_COLOR,
                     marker="$h$")
 
-                ax.scatter(
-                    x=self.filtered_human_position[0],
-                    y=self.filtered_human_position[1],
-                    c=HUMAN_COLOR,
-                    marker="$H$")
+            ax.scatter(
+                x=self.filtered_human_position[0],
+                y=self.filtered_human_position[1],
+                c=HUMAN_COLOR,
+                marker="$H$")
             
             ax.set_xlim(-1, 10)
             ax.set_ylim(-1, 5)

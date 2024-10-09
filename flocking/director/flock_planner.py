@@ -13,7 +13,7 @@ REDIS_HOST = "localhost"
 # REDIS_HOST = "10.5.90.8"
 REDIS_PORT = "6379"
 
-X_MAX = 9
+X_MAX = 6
 Y_MAX = 4
 
 class FlockPlanner:
@@ -76,16 +76,24 @@ class FlockPlanner:
         self.boids_runner.move_robots(robot_positions)
 
         # update human location
+        # human_candidates = [h for humans in self.humans.values() for h in humans.coords]
+        # if human_candidates:
+        #     self.human = self.human_filter.apply(human_candidates, 1)
+        #     if self.human:
+        #         human_array = np.array(self.human).reshape((2,))
+        #         self.boids_runner.move_human(human_array)
+        #     else:
+        #         self.human = None
+        # else:
+        #     self.human = None
+
         human_candidates = [h for humans in self.humans.values() for h in humans.coords]
         if human_candidates:
-            self.human = self.human_filter.apply(human_candidates, 1)
-            if self.human:
-                human_array = np.array(self.human).reshape((2,))
+            human = self.human_filter.apply(human_candidates, 1)
+            if human:
+                human_array = np.array(human).reshape((2,))
                 self.boids_runner.move_human(human_array)
-            else:
-                self.human = None
-        else:
-            self.human = None
+                self.human = human
 
         # update base targets
         self.boids_runner.update_targets(steps=2, mode=self.mode)
