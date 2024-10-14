@@ -22,19 +22,18 @@ from flocking.humans.utils import get_depth_at_pixel
 from flocking.utils import Pose
 
 
-REDIS_HOST = "192.168.1.150"
 REDIS_PORT = "6379"
 
 class StatePublisher(Node):
 
-    def __init__(self, robot_id):
+    def __init__(self, robot_id, redis_host):
         super().__init__("state_publisher")
 
         robot_name = "robot_" + str(robot_id)
         self.get_logger().info("creating state publisher")
 
         # redis
-        self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+        self.redis_client = redis.Redis(host=redis_host, port=REDIS_PORT)
         self.pose_key = robot_name + "::pose"
         self.battery_key = robot_name + "::battery"
         self.obstacles_front_key = robot_name + "::obstacles::front"
@@ -67,7 +66,7 @@ class StatePublisher(Node):
 
         # person detection
         self.camera = RealSenseCamera(width=640, height=360)
-        self.camera_timer = self.create_timer(1/15, self.publish_image)
+        #self.camera_timer = self.create_timer(1/15, self.publish_image)
         self.yolo = YOLO("models/yolov5nu.pt")
         self.yolo_timer = self.create_timer(0.1, self.publish_humans)
         self.yolo_threshold = 0.5

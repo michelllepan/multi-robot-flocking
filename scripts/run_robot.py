@@ -30,9 +30,9 @@ from flocking.robot import FlockFollower, MusicPlayer
 #     p1.join()
 #     p2.join()
 
-def main(args=None, robot_id=1):
+def main(args=None, robot_id=1, redis_host="localhost"):
     rclpy.init(args=args)
-    robot = FlockFollower(robot_id)
+    robot = FlockFollower(robot_id, redis_host)
     rclpy.spin(robot)
     robot.destroy_node()
     rclpy.shutdown()
@@ -40,4 +40,5 @@ def main(args=None, robot_id=1):
 
 if __name__ == '__main__':
     robot_id = os.environ.get("ROBOT_ID", 1)
-    main(robot_id=robot_id)
+    redis_host = os.environ.get("REDIS_HOST", "localhost")
+    main(robot_id=robot_id, redis_host=redis_host)
