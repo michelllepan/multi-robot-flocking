@@ -193,7 +193,7 @@ class FlockFollower(Node):
         if self.flock_state == "GOTO":
             linear_speed = 0.15 * np.tanh(4 * np.linalg.norm(goal_vec) - 2.0) + 0.15
         else:
-            linear_speed = 0.15 * np.tanh(30 * np.linalg.norm(goal_vec) - 4.5) + 0.15
+            linear_speed = 0.15 * np.tanh(30 * np.linalg.norm(goal_vec) - 4.5) + 0.15 
         if theta < np.pi / 2:
             self.twist.linear.x = min(linear_speed, max_lin_speed)
         else:
