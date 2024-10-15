@@ -72,14 +72,14 @@ class Visualizer:
             if humans is not None:
                 self.humans[r] = humans
 
-            image_data = self.redis_clients[r].get(self.redis_keys[r]["image"])
-            if image_data is None:
-                image_array = np.zeros((640, 360, 3)).astype(np.uint8)
-            else:
-                image = Image.open(BytesIO(image_data))
-                image_array = np.array(image)
-                image_array = cv2.resize(image_array, (360, 640), interpolation=cv2.INTER_AREA)
-            self.images[r] = image_array
+            # image_data = self.redis_clients[r].get(self.redis_keys[r]["image"])
+            # if image_data is None:
+            #     image_array = np.zeros((640, 360, 3)).astype(np.uint8)
+            # else:
+            #     image = Image.open(BytesIO(image_data))
+            #     image_array = np.array(image)
+            #     image_array = cv2.resize(image_array, (360, 640), interpolation=cv2.INTER_AREA)
+            # self.images[r] = image_array
 
         human_string = self.redis_clients[0].get(self.filtered_human_key)
         if human_string:
@@ -168,10 +168,11 @@ class Visualizer:
             fig_array = cv2.resize(fig_array, (1280, 640), interpolation=cv2.INTER_AREA)
             plt.close(fig)
 
-            images = [self.images[r] for r in self.robots]
-            all_images = np.concatenate([fig_array] + images, axis=1)
+            # images = [self.images[r] for r in self.robots]
+            # all_images = np.concatenate([fig_array] + images, axis=1)
 
-            cv2.imshow("figure", all_images)
+            # cv2.imshow("figure", all_images)
+            cv2.imshow("figure", fig_array)
             if cv2.waitKey(1) & 0xFF == ord('q'): 
                 break
 
