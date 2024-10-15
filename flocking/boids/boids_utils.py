@@ -7,10 +7,10 @@ from flocking.boids.vector_utils import normalize, clip_by_norm
 
 
 # period for carrot function
-CARROT_PERIOD = 42 # seconds
+CARROT_PERIOD = 36 # seconds
 
 # proportion of space to use for carrot
-CARROT_SCALE = 0.9
+CARROT_SCALE = 0.8
 
 # cap goal influence
 GOAL_CAP = 2

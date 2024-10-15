@@ -49,6 +49,7 @@ class FlockFollower(Node):
         # redis
         self.redis_client = redis.Redis(host=redis_host, port=REDIS_PORT)
         self.redis_timer = self.create_timer(0.005, self.read_redis)
+        # self.print_timer = self.create_timer(0.005, self.print_info)
 
         self.flock_state_key = "state"
         self.goal_key = robot_name + "::goal"
@@ -81,6 +82,8 @@ class FlockFollower(Node):
         if not server_reached:
             self.get_logger().error('Unable to connect to server. Timeout exceeded. Is stretch_driver running?')
             sys.exit()
+
+        self.read_redis()
         
     def read_redis(self):
         try:
