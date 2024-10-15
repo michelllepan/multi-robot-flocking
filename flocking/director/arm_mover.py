@@ -3,19 +3,19 @@ import redis
 import time
 
 
-REDIS_HOST = "localhost"
-REDIS_PORT = "6379"
-
-
 class ArmMover:
 
-    def __init__(self, robots=(1,)):
+    def __init__(self, robots, redis_config):
         super().__init__()
-        self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
-        # TODO: check robots
+        self.robots = robots
+        self.redis_clients = {}
+
+        for i in redis_config:
+            host, port = redis_config[i]
+            self.redis_clients[i] = redis.Redis(host, port)
 
     def send_arm_commands(self):
-        flock_state_str = self.redis_client.get("state")
+        flock_state_str = self.redis_clients[0].get("state")
         flock_state = flock_state_str.decode("utf-8") if flock_state_str else "STOP"
 
         if flock_state == "GESTURE_CLAP":
@@ -33,10 +33,8 @@ class ArmMover:
             # "gripper_finger_right": (0.5 if gripper_open else 0.0, 0.5),
             # "gripper_aperture": (0.5 if gripper_open else 0.0, 0.5),
         }
-        self.redis_client.set("robot_1::arm", str(arm_dict))
-        self.redis_client.set("robot_2::arm", str(arm_dict))
-        self.redis_client.set("robot_3::arm", str(arm_dict))
-        self.redis_client.set("robot_4::arm", str(arm_dict))
+        for r in self.robots:
+            self.redis_clients[r].set(f"robot_{r}::arm", str(arm_dict))
 
     def oscillate(self):
         lift = 0.7 + 0.15 * np.sin(time.time() * np.pi * 2 / 10 + 8)
@@ -45,7 +43,7 @@ class ArmMover:
         wrist_pitch = -0.5 + 0.5 * np.sin(time.time() * np.pi * 2 / 7)
         wrist_roll = 1.0 * np.sin(time.time() * np.pi * 2 / 20)
 
-        arm_dict = {
+        arm_dict_1 = {
             "lift": (lift, 0.03),
             "arm_l3": (arm, 0.02),
             "arm_l2": (arm, 0.02),
@@ -56,9 +54,7 @@ class ArmMover:
             "wrist_roll": (wrist_roll, 0.4),
             "gripper_finger_left": (0.0, 0.2),
         }
-
-        self.redis_client.set("robot_1::arm", str(arm_dict))
-        self.redis_client.set("robot_3::arm", str(arm_dict))
+        arm_dict_3 = arm_dict_1
 
         lift = 0.5 + 0.2 * np.sin(time.time() * np.pi * 2 / 15 + 8)
         arm = 0.015 + 0.015 * np.sin(time.time() * np.pi * 2 / 15 + 3)
@@ -66,7 +62,7 @@ class ArmMover:
         wrist_pitch = -0.5 + 0.5 * np.sin(time.time() * np.pi * 2 / 15)
         wrist_roll = 1.0 * np.sin(time.time() * np.pi * 2 / 20)
 
-        arm_dict = {
+        arm_dict_2 = {
             "lift": (lift, 0.02),
             "arm_l3": (arm, 0.01),
             "arm_l2": (arm, 0.01),
@@ -77,5 +73,7 @@ class ArmMover:
             "wrist_roll": (wrist_roll, 0.2),
             "gripper_finger_left": (0.0, 0.2),
         }
-        self.redis_client.set("robot_2::arm", str(arm_dict))
-        self.redis_client.set("robot_4::arm", str(arm_dict))
+        arm_dict_4 = arm_dict_2
+        
+        for r in self.robots:
+            self.redis_clients[r].set(f"robot_{r}::arm", str(eval(f"arm_dict_{r}")))

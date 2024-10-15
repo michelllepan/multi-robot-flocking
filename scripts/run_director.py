@@ -4,24 +4,32 @@ from multiprocessing import Process
 
 from flocking.director import ArmMover, FlockPlanner, Visualizer
 
+REDIS_CONFIG = {
+    0: ("localhost", "6379"), # director
+    1: ("192.168.1.151", "6379"),
+    2: ("192.168.1.152", "6379"),
+    3: ("192.168.1.153", "6379"),
+    4: ("192.168.1.154", "6379"),
+}
 
-def run_planner(robots):
-    director = FlockPlanner(robots=robots)
-    arm_mover = ArmMover(robots=robots)
+def run_planner(robots, redis_config):
+    director = FlockPlanner(robots=robots, redis_config=redis_config)
+    arm_mover = ArmMover(robots=robots, redis_config=redis_config)
     while True:
         director.step_flocking()
         arm_mover.send_arm_commands()
         time.sleep(0.02) 
 
-def run_visualizer(robots):
-    visualizer = Visualizer(robots=robots)
+def run_visualizer(robots, redis_config):
+    visualizer = Visualizer(robots=robots, redis_config=redis_config)
     visualizer.show_plot()
 
 def main(robots=(1,)):
-    p1 = Process(target=run_planner, args=(robots,))
+    redis_config = {i: REDIS_CONFIG[i] for i in [0] + list(robots)}
+    p1 = Process(target=run_planner, args=(robots, redis_config))
     p1.start()
 
-    p2 = Process(target=run_visualizer, args=(robots,))
+    p2 = Process(target=run_visualizer, args=(robots, redis_config))
     p2.start()
 
     p1.join()

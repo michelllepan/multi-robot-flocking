@@ -11,13 +11,7 @@ from PIL import Image
 
 from flocking.utils import Goal, Pose, Humans
 
-REDIS_CONFIG = {
-    0: ("localhost", "6379"), # director
-    1: ("192.168.1.151", "6379"),
-    2: ("192.168.1.152", "6379"),
-    3: ("192.168.1.153", "6379"),
-    4: ("192.168.1.154", "6379"),
-}
+
 GOAL_COLOR = "mediumpurple"
 ROBOT_COLOR = "steelblue"
 CARROT_COLOR = "coral"
@@ -26,7 +20,7 @@ HUMAN_CANDIDATE_COLOR = "darkseagreen"
 
 class Visualizer:
 
-    def __init__(self, robots):
+    def __init__(self, robots, redis_config):
         super().__init__()
         self.robots = robots
         self.num_robots = len(robots)
@@ -40,8 +34,8 @@ class Visualizer:
         self.humans = {}
         self.filtered_human = None
 
-        for i in REDIS_CONFIG:
-            host, port = REDIS_CONFIG[i]
+        for i in redis_config:
+            host, port = redis_config[i]
             self.redis_clients[i] = redis.Redis(host, port)
 
         for r in self.robots:

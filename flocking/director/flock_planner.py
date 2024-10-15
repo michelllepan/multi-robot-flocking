@@ -8,20 +8,13 @@ from flocking.boids import BoidsRunner
 from flocking.utils import Goal, Pose, Humans
 
 GOAL_TOLERANCE = 0.1
-REDIS_CONFIG = {
-    0: ("localhost", "6379"), # director
-    1: ("192.168.1.151", "6379"),
-    2: ("192.168.1.152", "6379"),
-    3: ("192.168.1.153", "6379"),
-    4: ("192.168.1.154", "6379"),
-}
 
 X_MAX = 6
 Y_MAX = 4
 
 class FlockPlanner:
 
-    def __init__(self, robots=(1,)):
+    def __init__(self, robots, redis_config):
         super().__init__()
         self.robots = robots
 
@@ -29,8 +22,8 @@ class FlockPlanner:
         self.redis_clients = {}
         self.redis_keys = {}
 
-        for i in REDIS_CONFIG:
-            host, port = REDIS_CONFIG[i]
+        for i in redis_config:
+            host, port = redis_config[i]
             self.redis_clients[i] = redis.Redis(host, port)
 
         for r in self.robots:
