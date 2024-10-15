@@ -11,10 +11,13 @@ from PIL import Image
 
 from flocking.utils import Goal, Pose, Humans
 
-REDIS_HOST = "localhost"
-# REDIS_HOST = "10.5.90.8"
-REDIS_PORT = "6379"
-
+REDIS_CONFIG = {
+    0: ("localhost", "6379"), # director
+    1: ("192.168.1.151", "6379"),
+    2: ("192.168.1.152", "6379"),
+    3: ("192.168.1.153", "6379"),
+    4: ("192.168.1.154", "6379"),
+}
 GOAL_COLOR = "mediumpurple"
 ROBOT_COLOR = "steelblue"
 CARROT_COLOR = "coral"
@@ -27,7 +30,7 @@ class Visualizer:
         super().__init__()
         self.robots = robots
         self.num_robots = len(robots)
-        self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+        self.redis_clients = {}
         self.redis_keys = {}
 
         self.goals = {}
@@ -36,6 +39,10 @@ class Visualizer:
         self.images = {}
         self.humans = {}
         self.filtered_human = None
+
+        for i in REDIS_CONFIG:
+            host, port = REDIS_CONFIG[i]
+            self.redis_clients[i] = redis.Redis(host, port)
 
         for r in self.robots:
             self.redis_keys[r] = {}
@@ -52,26 +59,26 @@ class Visualizer:
 
     def read_redis(self):
         for r in self.robots:
-            pose_string = self.redis_client.get(self.redis_keys[r]["pose"])
+            pose_string = self.redis_clients[r].get(self.redis_keys[r]["pose"])
             pose = Pose.from_string(pose_string)
             if pose is not None:
                 self.poses[r] = pose
 
-            goal_string = self.redis_client.get(self.redis_keys[r]["goal"])
+            goal_string = self.redis_clients[r].get(self.redis_keys[r]["goal"])
             goal = Goal.from_string(goal_string)
             if goal is not None:
                 self.goals[r] = goal
 
-            carrot_string = self.redis_client.get(self.redis_keys[r]["carrot"])
+            carrot_string = self.redis_clients[r].get(self.redis_keys[r]["carrot"])
             carrot = Goal.from_string(carrot_string)
             self.carrots[r] = carrot
 
-            human_string = self.redis_client.get(self.redis_keys[r]["humans"])
+            human_string = self.redis_clients[r].get(self.redis_keys[r]["humans"])
             humans = Humans.from_string(human_string)
             if humans is not None:
                 self.humans[r] = humans
 
-            image_data = self.redis_client.get(self.redis_keys[r]["image"])
+            image_data = self.redis_clients[r].get(self.redis_keys[r]["image"])
             if image_data is None:
                 image_array = np.zeros((640, 360, 3)).astype(np.uint8)
             else:
@@ -80,7 +87,7 @@ class Visualizer:
                 image_array = cv2.resize(image_array, (360, 640), interpolation=cv2.INTER_AREA)
             self.images[r] = image_array
 
-        human_string = self.redis_client.get(self.filtered_human_key)
+        human_string = self.redis_clients[0].get(self.filtered_human_key)
         if human_string:
             self.filtered_human = eval(human_string)
 

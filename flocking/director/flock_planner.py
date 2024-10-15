@@ -8,10 +8,13 @@ from flocking.boids import BoidsRunner
 from flocking.utils import Goal, Pose, Humans
 
 GOAL_TOLERANCE = 0.1
-
-REDIS_HOST = "localhost"
-# REDIS_HOST = "10.5.90.8"
-REDIS_PORT = "6379"
+REDIS_CONFIG = {
+    0: ("localhost", "6379"), # director
+    1: ("192.168.1.151", "6379"),
+    2: ("192.168.1.152", "6379"),
+    3: ("192.168.1.153", "6379"),
+    4: ("192.168.1.154", "6379"),
+}
 
 X_MAX = 6
 Y_MAX = 4
@@ -23,8 +26,12 @@ class FlockPlanner:
         self.robots = robots
 
         # redis setup
-        self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+        self.redis_clients = {}
         self.redis_keys = {}
+
+        for i in REDIS_CONFIG:
+            host, port = REDIS_CONFIG[i]
+            self.redis_clients[i] = redis.Redis(host, port)
 
         for r in self.robots:
             self.redis_keys[r] = {}
@@ -76,24 +83,24 @@ class FlockPlanner:
         self.boids_runner.move_robots(robot_positions)
 
         # update human location
-        # human_candidates = [h for humans in self.humans.values() for h in humans.coords]
-        # if human_candidates:
-        #     self.human = self.human_filter.apply(human_candidates, 1)
-        #     if self.human:
-        #         human_array = np.array(self.human).reshape((2,))
-        #         self.boids_runner.move_human(human_array)
-        #     else:
-        #         self.human = None
-        # else:
-        #     self.human = None
-
         human_candidates = [h for humans in self.humans.values() for h in humans.coords]
         if human_candidates:
-            human = self.human_filter.apply(human_candidates, 1)
-            if human:
-                human_array = np.array(human).reshape((2,))
+            self.human = self.human_filter.apply(human_candidates, 1)
+            if self.human:
+                human_array = np.array(self.human).reshape((2,))
                 self.boids_runner.move_human(human_array)
-                self.human = human
+            else:
+                self.human = None
+        else:
+            self.human = None
+
+        # human_candidates = [h for humans in self.humans.values() for h in humans.coords]
+        # if human_candidates:
+        #     human = self.human_filter.apply(human_candidates, 1)
+        #     if human:
+        #         human_array = np.array(human).reshape((2,))
+        #         self.boids_runner.move_human(human_array)
+        #         self.human = human
 
         # update base targets
         self.boids_runner.update_targets(steps=2, mode=self.mode)
@@ -125,33 +132,37 @@ class FlockPlanner:
 
     def read_redis(self):
         for r in self.robots:
-            head_string = self.redis_client.get(self.redis_keys[r]["head"])
+            head_string = self.redis_clients[r].get(self.redis_keys[r]["head"])
             if not head_string: continue
             head = eval(head_string)
             self.heads[r] = head
 
-            pose_string = self.redis_client.get(self.redis_keys[r]["pose"])
+            pose_string = self.redis_clients[r].get(self.redis_keys[r]["pose"])
             if not pose_string: continue
             pose = Pose.from_string(pose_string)
             if pose is None: continue
             self.poses[r] = pose
 
-            human_string = self.redis_client.get(self.redis_keys[r]["humans"])
+            human_string = self.redis_clients[r].get(self.redis_keys[r]["humans"])
             if not human_string: continue
             humans = Humans.from_string(human_string)
             if humans is None: continue
             self.humans[r] = humans
 
-        mode_string = self.redis_client.get(self.mode_key)
+        mode_string = self.redis_clients[0].get(self.mode_key)
         if mode_string is not None:
             self.mode = mode_string.decode("utf-8")
+
+        flock_state_string = self.redis_clients[0].get(self.flock_state_key)
+        if flock_state_string is not None:
+            self.flock_state = flock_state_string.decode("utf-8")
 
     def write_redis(self):
         for r in self.robots:
             if r not in self.goals: continue
-            self.redis_client.set(self.redis_keys[r]["goal"], str(self.goals[r]))
-            self.redis_client.set(self.redis_keys[r]["look"], str(self.looks[r]))
-            self.redis_client.set(self.redis_keys[r]["carrot"], str(self.carrots[r]))
-
-        self.redis_client.set(self.filtered_human_key, str(self.human))
-        # self.redis_client.set(self.flock_state_key, self.flock_state)
+            self.redis_clients[r].set(self.redis_keys[r]["goal"], str(self.goals[r]))
+            self.redis_clients[r].set(self.redis_keys[r]["look"], str(self.looks[r]))
+            self.redis_clients[r].set(self.redis_keys[r]["carrot"], str(self.carrots[r]))
+            self.redis_clients[r].set(self.filtered_human_key, str(self.human))
+            self.redis_clients[r].set(self.flock_state_key, self.flock_state)
+            self.redis_clients[r].set(self.mode_key, self.mode)
