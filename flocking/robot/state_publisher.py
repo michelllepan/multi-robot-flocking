@@ -22,18 +22,16 @@ from flocking.humans.utils import get_depth_at_pixel
 from flocking.utils import Pose
 
 
-REDIS_PORT = "6379"
-
 class StatePublisher(Node):
 
-    def __init__(self, robot_id, redis_host):
+    def __init__(self, robot_id, redis_host, redis_port):
         super().__init__("state_publisher")
 
         robot_name = "robot_" + str(robot_id)
         self.get_logger().info("creating state publisher")
 
         # redis
-        self.redis_client = redis.Redis(host=redis_host, port=REDIS_PORT)
+        self.redis_client = redis.Redis(host=redis_host, port=redis_port)
         self.pose_key = robot_name + "::pose"
         self.battery_key = robot_name + "::battery"
         self.obstacles_front_key = robot_name + "::obstacles::front"

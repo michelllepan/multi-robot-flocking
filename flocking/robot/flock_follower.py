@@ -29,11 +29,9 @@ LIN_VEL_MAX = 0.3
 ANG_VEL_SCALE = 0.6
 ANG_VEL_MAX = 1.0
 
-REDIS_PORT = "6379"
-
 class FlockFollower(Node):
 
-    def __init__(self, robot_id, redis_host):
+    def __init__(self, robot_id, redis_host, redis_port):
         robot_name = "robot_" + str(robot_id)
         super().__init__(robot_name)
 
@@ -47,7 +45,7 @@ class FlockFollower(Node):
         self.head = None
 
         # redis
-        self.redis_client = redis.Redis(host=redis_host, port=REDIS_PORT)
+        self.redis_client = redis.Redis(host=redis_host, port=redis_port)
         self.redis_timer = self.create_timer(0.005, self.read_redis)
         # self.print_timer = self.create_timer(0.005, self.print_info)
 

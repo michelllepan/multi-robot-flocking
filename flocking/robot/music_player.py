@@ -3,16 +3,13 @@ import time
 import vlc
 
 
-REDIS_PORT = "6379"
-
-
 class MusicPlayer:
 
-    def __init__(self, robot_id, redis_host):
+    def __init__(self, robot_id, redis_host, redis_port):
         super().__init__()
         robot_name = "robot_" + str(robot_id)
 
-        self.redis_client = redis.Redis(host=redis_host, port=REDIS_PORT)
+        self.redis_client = redis.Redis(host=redis_host, port=redis_port)
         self.players = {
             0: vlc.MediaPlayer("sounds/base.mp3"),
             1: vlc.MediaPlayer("sounds/arm_j0_torso.mp3"),
