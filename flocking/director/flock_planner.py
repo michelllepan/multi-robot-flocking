@@ -159,3 +159,4 @@ class FlockPlanner:
             self.redis_clients[r].set(self.filtered_human_key, str(self.human))
             self.redis_clients[r].set(self.flock_state_key, self.flock_state)
             self.redis_clients[r].set(self.mode_key, self.mode)
+        self.redis_clients[0].set(self.filtered_human_key, str(self.human))
