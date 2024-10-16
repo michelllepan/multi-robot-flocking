@@ -7,7 +7,7 @@ from flocking.boids.vector_utils import normalize, clip_by_norm
 
 
 # period for carrot function
-CARROT_PERIOD = 36 # seconds
+CARROT_PERIOD = 45 # seconds
 
 # proportion of space to use for carrot
 CARROT_SCALE = 0.8
@@ -19,10 +19,10 @@ GOAL_CAP = 2
 LINEAR_CAP = 2
 
 # period for linear function
-LINEAR_PERIOD = 45 # seconds
+LINEAR_PERIOD = 40 # seconds
 
 # how close robots have to be before separation becomes a concern
-SEPARATION_MIN_DISTANCE = 1.5
+SEPARATION_MIN_DISTANCE = 1.0
 
 # how close robots have to be to bounds before aversion takes effect
 MARGIN = 1.5
@@ -182,6 +182,42 @@ def compute_goal(
     return goal_vec
 
 
+def determine_stick_positions(
+    region: Tuple[float],
+    timestamp: float,
+    robot_positions: Sequence[np.ndarray],
+):
+    x_min, x_max, y_min, y_max = region
+    width, height = x_max - x_min, y_max - y_min
+    assert width > 0 and height > 0
+
+    robot_positions = np.array(robot_positions)
+    assert(robot_positions.ndim == 2 and robot_positions.shape[1] == 2)
+
+    radians = 2 * math.pi * (timestamp % LINEAR_PERIOD) / LINEAR_PERIOD
+    sorted_indices = np.argsort(robot_positions, axis=0)
+    num_robots = len(robot_positions)
+
+    if width > height: # this is the one
+        robot_lanes = sorted_indices[:, 0] # assign lane from order on x-axis
+        lane_x = x_min + (width / num_robots) * robot_lanes
+        center_y = (y_min + y_max) / 2
+        goal_x = (0.4 * np.cos(radians)) + lane_x + 2
+        goal_y = (np.sin(radians) * height / 2) + center_y * np.ones(num_robots)
+
+    else:
+        robot_lanes = sorted_indices[:, 1] # assign lane from order on y-axis
+        lane_y = y_min + (height / num_robots) * robot_lanes
+        center_x = (x_min + x_max) / 2
+        goal_y = (0.4 * np.cos(radians)) + lane_y + 2
+        goal_x = (np.sin(radians) * width / 2) + center_x * np.ones(num_robots)
+
+    goal_x = goal_x.reshape((num_robots, 1))
+    goal_y = goal_y.reshape((num_robots, 1))
+    goal = np.hstack((goal_x, goal_y))
+    return goal
+
+
 def compute_linear(
     robot_id: int,
     region: Tuple[float],
@@ -201,18 +237,18 @@ def compute_linear(
     sorted_indices = np.argsort(robot_positions, axis=0)
     num_robots = len(robot_positions)
 
-    if width > height:
+    if width > height: # this is the one
         robot_lane = sorted_indices[robot_id][0] # assign lane from order on x-axis
         lane_x = x_min + (width / num_robots * robot_lane)
         center_y = (y_min + y_max) / 2
-        goal_x = (0.75 * np.cos(radians)) + lane_x + 2
+        goal_x = (0.4 * np.cos(radians)) + lane_x + 2
         goal_y = (np.sin(radians) * height / 2) + center_y
 
     else:
         robot_lane = sorted_indices[robot_id][1] # assign lane from order on y-axis
         lane_y = y_min + (height / num_robots * robot_lane)
         center_x = (x_min + x_max) / 2
-        goal_y = (0.75 * np.cos(radians)) + lane_y + 2
+        goal_y = (0.4 * np.cos(radians)) + lane_y + 2
         goal_x = (np.sin(radians) * width / 2) + center_x
 
     goal_position = np.array([goal_x, goal_y])

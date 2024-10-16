@@ -85,6 +85,13 @@ class BoidsRunner:
             carrots.append(pos)
         return np.vstack(carrots)
     
+    def _get_sticks(self):
+        return determine_stick_positions(
+            region=(0, self.width, 0, self.height),
+            timestamp=self.current_time,
+            robot_positions=self.robot_positions,
+        )
+    
     def _boids_static(
         self,
         robot_id: int,

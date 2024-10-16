@@ -47,7 +47,7 @@ _weight_modes = {
             goal             =1.0,
             bounds_aversion  =0.0,
             cohesion         =0.0,
-            separation       =1.0,
+            separation       =0.0,
             alignment        =0.0,
             drive_at_human   =0.0,
             linear           =0.0,
@@ -55,7 +55,7 @@ _weight_modes = {
     "ALIGN": 
         WeightMode(
             goal             =0.0,
-            bounds_aversion  =1.0,
+            bounds_aversion  =2.0,
             cohesion         =0.0,
             separation       =2.0,
             alignment        =2.0,
@@ -73,14 +73,23 @@ _weight_modes = {
             linear           =0.0,
         ),
     "LINEAR_TRACKS": 
-        WeightMode(
+        # WeightMode(
+        #     goal             =0.0,
+        #     bounds_aversion  =1.0,
+        #     cohesion         =0.0,
+        #     separation       =1.0,
+        #     alignment        =0.0,
+        #     drive_at_human   =0.0,
+        #     linear           =2.0,
+        # ),
+         WeightMode(
             goal             =0.0,
-            bounds_aversion  =1.0,
+            bounds_aversion  =0.0,
             cohesion         =0.0,
-            separation       =2.0,
+            separation       =0.0,
             alignment        =0.0,
             drive_at_human   =0.0,
-            linear           =1.0,
+            linear           =2.0,
         ),
 }
 

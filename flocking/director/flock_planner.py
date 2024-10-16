@@ -97,7 +97,6 @@ class FlockPlanner:
 
         # update base targets
         self.boids_runner.update_targets(steps=2, mode=self.mode)
-        carrots = self.boids_runner._get_carrots()
         for i in range(len(self.robots)):
             r = self.robots[i]
             t = self.boids_runner.target_positions[i]
@@ -107,7 +106,11 @@ class FlockPlanner:
 
             # update carrots if robots are circling
             if self.mode == "CIRCLE":
+                carrots = self.boids_runner._get_carrots()
                 self.carrots[r] = Goal(x=float(carrots[i][0]), y=float(carrots[i][1]))
+            elif self.mode == "LINEAR_TRACKS":
+                sticks = self.boids_runner._get_sticks()
+                self.carrots[r] = Goal(x=float(sticks[i][0]), y=float(sticks[i][1]))
             else:
                 self.carrots[r] = None
 
