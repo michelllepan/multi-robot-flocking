@@ -23,10 +23,9 @@ from flocking.utils import Goal, Pose
 GOAL_TOLERANCE = 0.05
 OBS_TOLERANCE = 0.75
 
-LIN_VEL_SCALE = 1.5
 LIN_VEL_MAX = 0.3
 
-ANG_VEL_SCALE = 0.6
+ANG_VEL_SCALE = 0.7
 ANG_VEL_MAX = 1.0
 
 class FlockFollower(Node):
@@ -201,7 +200,7 @@ class FlockFollower(Node):
             self.twist.linear.x = 0.0
 
         # calculate angular velocity
-        angular_speed = np.tanh(ANG_VEL_SCALE * theta)
+        angular_speed = ANG_VEL_SCALE * np.tanh(0.6 * theta)
         if self.twist.linear.x == 0.0:
             angular_speed = min(angular_speed, 0.5)
         else:
