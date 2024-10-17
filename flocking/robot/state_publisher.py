@@ -208,16 +208,21 @@ class StatePublisher(Node):
     def publish_gestures(self, detection_result, out_image, timestamp):
         try:
             # for now assume only one pose detected
-            landmarks = parse_landmarks(detection_result)[0]
-
-            # y coordinates increase from top to bottom of image
-            right_raised = (landmarks["right_elbow"][1] < landmarks["right_shoulder"][1] and
-                            landmarks["right_hand"][1] < landmarks["right_elbow"][1])
-            left_raised = (landmarks["left_elbow"][1] < landmarks["left_shoulder"][1] and
-                            landmarks["left_hand"][1] < landmarks["left_elbow"][1])
+            landmarks = parse_landmarks(detection_result)
+            if landmarks:
+                # y coordinates increase from top to bottom of image
+                landmarks = landmarks[0]
+                right_raised = (landmarks["right_elbow"][1] < landmarks["right_shoulder"][1] and
+                                landmarks["right_hand"][1] < landmarks["right_elbow"][1])
+                left_raised = (landmarks["left_elbow"][1] < landmarks["left_shoulder"][1] and
+                                landmarks["left_hand"][1] < landmarks["left_elbow"][1])
+            else:
+                right_raised = False
+                left_raised = False
 
             self.redis_client.set(self.right_arm_key, str(right_raised))
             self.redis_client.set(self.left_arm_key, str(left_raised))
+
         except redis.exceptions.ConnectionError as e:
             print(e, f" at time {time.time() : .0f}")
 
