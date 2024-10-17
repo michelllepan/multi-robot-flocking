@@ -212,10 +212,12 @@ class StatePublisher(Node):
             if landmarks:
                 # y coordinates increase from top to bottom of image
                 landmarks = landmarks[0]
-                right_raised = (landmarks["right_elbow"][1] < landmarks["right_shoulder"][1] and
-                                landmarks["right_hand"][1] < landmarks["right_elbow"][1])
-                left_raised = (landmarks["left_elbow"][1] < landmarks["left_shoulder"][1] and
-                                landmarks["left_hand"][1] < landmarks["left_elbow"][1])
+                # right_raised = (landmarks["right_elbow"][1] < landmarks["right_shoulder"][1] and
+                #                 landmarks["right_hand"][1] < landmarks["right_elbow"][1])
+                # left_raised = (landmarks["left_elbow"][1] < landmarks["left_shoulder"][1] and
+                #                 landmarks["left_hand"][1] < landmarks["left_elbow"][1])
+                right_raised = landmarks["right_hand"][1] < landmarks["right_shoulder"][1]
+                left_raised = landmarks["left_hand"][1] < landmarks["left_shoulder"][1]
             else:
                 right_raised = False
                 left_raised = False
