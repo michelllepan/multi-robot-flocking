@@ -166,15 +166,6 @@ class FlockFollower(Node):
             self.twist.angular.z = 0.0
             self.vel_pub.publish(self.twist)
             return
-            # if self.goal.h is not None and abs(self.pose.h - self.goal.h) > 0.05:
-            #     self.twist.linear.x = 0.0
-            #     self.twist.angular.z = 0.1
-            #     self.vel_pub.publish(self.twist)
-            # else:
-            #     self.twist.linear.x = 0.0
-            #     self.twist.angular.z = 0.0
-            #     self.vel_pub.publish(self.twist)
-            #     return
 
         # unit vector of the heading
         heading_vec = np.array([np.cos(self.pose.h), np.sin(self.pose.h)])

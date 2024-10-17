@@ -64,7 +64,6 @@ class StatePublisher(Node):
 
         # person detection
         self.camera = RealSenseCamera(width=640, height=360)
-        #self.camera_timer = self.create_timer(1/15, self.publish_image)
         self.yolo = YOLO("models/yolov5nu.pt")
         self.yolo_timer = self.create_timer(0.1, self.publish_humans)
         self.yolo_threshold = 0.5
@@ -139,32 +138,6 @@ class StatePublisher(Node):
         except redis.exceptions.ConnectionError as e:
             print(e, f" at time {time.time() : .0f}")
 
-    # def publish_humans(self, detections_robot):
-    #     if self.pose is None or self.head is None or detections_robot is None:
-    #         return
-    #     elif len(detections_robot) == 0:
-    #         self.redis_client.set(self.humans_key, str(detections_robot))
-    #         return
-
-    #     detections_robot = np.array(detections_robot)
-    #     if detections_robot.ndim < 2:
-    #         detections_robot = np.expand_dims(detections_robot, axis=0)
-
-    #     # add z coordinate for rotation
-    #     z = np.zeros((detections_robot.shape[0], 1))
-    #     detections_robot = np.hstack((detections_robot, z))
-
-    #     # rotation
-    #     rot = Rotation.from_euler("z", self.pose.h + self.head)
-    #     detections_world = rot.apply(detections_robot)
-    #     detections_world = detections_world[:, :2]
-
-    #     # translation
-    #     detections_world += np.array([self.pose.x, self.pose.y])
-
-    #     detections_world = detections_world.tolist()
-    #     self.redis_client.set(self.humans_key, str(detections_world))
-
     def publish_humans(self):
         try:
             if self.pose is None or self.head is None:
@@ -217,37 +190,6 @@ class StatePublisher(Node):
             detections_world = detections_world.tolist()
             self.redis_client.set(self.humans_key, str(detections_world))
 
-        except redis.exceptions.ConnectionError as e:
-            print(e, f" at time {time.time() : .0f}")
-
-    def publish_image(self):
-        try:
-            # start = time.time()
-            depth_frame, color_frame = self.camera.get_frames()
-            # depth_image, color_image = self.camera.convert_to_array(depth_frame, color_frame)
-            color_image = np.asanyarray(color_frame.get_data())
-            color_image = np.rot90(color_image, 3)
-            # color_image = cv2.resize(color_image, dsize=(360, 180), interpolation=cv2.INTER_CUBIC)
-
-            color_image = cv2.cvtColor(color_image, cv2.COLOR_BGRA2RGB)
-            _, jpeg_encoded = cv2.imencode(".jpg", color_image)
-            self.redis_client.set(self.color_image_key, jpeg_encoded.tobytes())
-            # end = time.time()
-
-            # print("stream image rate:", 1 / (end - start))
-            
-
-            # color_output = BytesIO()
-            # color_image = color_image[:,:,::-1] # switch order of color channels
-            # color_image = Image.fromarray(color_image.astype("uint8"), "RGB")
-            # color_image.save(color_output, format="png")
-            # self.redis_client.set(self.color_image_key, color_output.getvalue())
-            # color_output.close()
-
-            # depth_output = BytesIO()
-            # np.save(depth_output, depth_image, allow_pickle=False)
-            # self.redis_client.set(self.depth_image_key, depth_output.getvalue())
-            # depth_output.close()
         except redis.exceptions.ConnectionError as e:
             print(e, f" at time {time.time() : .0f}")
 
