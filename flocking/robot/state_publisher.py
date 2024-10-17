@@ -17,8 +17,8 @@ from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
-from flocking.humans import RealSenseCamera
-from flocking.humans.utils import get_depth_at_pixel
+from flocking.humans import RealSenseCamera, MediaPipeDetector
+from flocking.humans.utils import get_depth_at_pixel, parse_landmarks
 from flocking.utils import Pose
 
 
@@ -37,9 +37,9 @@ class StatePublisher(Node):
         self.obstacles_front_key = robot_name + "::obstacles::front"
         self.obstacles_back_key = robot_name + "::obstacles::back"
         self.obstacles_side_key = robot_name + "::obstacles::side"
+        self.left_arm_key = robot_name + "::left_raised"
+        self.right_arm_key = robot_name + "::right_raised"
         self.humans_key = robot_name + "::humans"
-        self.color_image_key = robot_name + "::color_image"
-        self.depth_image_key = robot_name + "::depth_image" 
         self.head_key = robot_name + "::head"
         self.music_key_prefix = robot_name + "::music::"
 
@@ -62,11 +62,22 @@ class StatePublisher(Node):
             JointState, '/joint_states', self.publish_head, 1)
         self.head = None
 
-        # person detection
+        # camera
         self.camera = RealSenseCamera(width=640, height=360)
+        self.color_image = None
+
+        # human detection
         self.yolo = YOLO("models/yolov5nu.pt")
         self.yolo_timer = self.create_timer(0.1, self.publish_humans)
         self.yolo_threshold = 0.5
+
+        # gesture detection
+        self.detector = MediaPipeDetector(self.publish_gestures)
+        def run_detection():
+            if self.color_image is None: return
+            timestamp = int(1000 * time.time())
+            self.detector.run_detection(self.color_image, timestamp)
+        self.detector_timer = self.create_timer(0.3, run_detection)
 
         # music
         self.music_base_sub = self.create_subscription(
@@ -145,9 +156,10 @@ class StatePublisher(Node):
             
             depth_frame, color_frame = self.camera.get_frames()
             depth_image, color_image = self.camera.convert_to_array(depth_frame, color_frame)
+            self.color_image = color_image
             height, width, c = color_image.shape
 
-            results = self.yolo([cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)])
+            results = self.yolo([cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)], verbose=False)
 
             cls = results[0].boxes.cls
             conf = results[0].boxes.conf
@@ -190,6 +202,22 @@ class StatePublisher(Node):
             detections_world = detections_world.tolist()
             self.redis_client.set(self.humans_key, str(detections_world))
 
+        except redis.exceptions.ConnectionError as e:
+            print(e, f" at time {time.time() : .0f}")
+
+    def publish_gestures(self, detection_result, out_image, timestamp):
+        try:
+            # for now assume only one pose detected
+            landmarks = parse_landmarks(detection_result)[0]
+
+            # y coordinates increase from top to bottom of image
+            right_raised = (landmarks["right_elbow"][1] < landmarks["right_shoulder"][1] and
+                            landmarks["right_hand"][1] < landmarks["right_elbow"][1])
+            left_raised = (landmarks["left_elbow"][1] < landmarks["left_shoulder"][1] and
+                            landmarks["left_hand"][1] < landmarks["left_elbow"][1])
+
+            self.redis_client.set(self.right_arm_key, str(right_raised))
+            self.redis_client.set(self.left_arm_key, str(left_raised))
         except redis.exceptions.ConnectionError as e:
             print(e, f" at time {time.time() : .0f}")
 
