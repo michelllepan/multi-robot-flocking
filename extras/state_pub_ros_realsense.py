@@ -9,16 +9,18 @@ from PIL import Image
 from scipy.spatial.transform import Rotation
 from ultralytics import YOLO
 
+import message_filters
 import rclpy
 from rclpy.node import Node
+from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import BatteryState, JointState, LaserScan
+from sensor_msgs.msg import BatteryState, CameraInfo, Image, JointState, LaserScan
 from tf2_ros import TransformException
 from tf2_ros.buffer import Buffer
 from tf2_ros.transform_listener import TransformListener
 
-from flocking.humans import RealSenseCamera, MediaPipeDetector
-from flocking.humans.utils import get_depth_at_pixel, parse_landmarks
+from flocking.humans import RealSenseCamera
+from flocking.humans.utils import get_depth_at_pixel
 from flocking.utils import Pose
 
 
@@ -37,9 +39,9 @@ class StatePublisher(Node):
         self.obstacles_front_key = robot_name + "::obstacles::front"
         self.obstacles_back_key = robot_name + "::obstacles::back"
         self.obstacles_side_key = robot_name + "::obstacles::side"
-        self.left_arm_key = robot_name + "::left_raised"
-        self.right_arm_key = robot_name + "::right_raised"
         self.humans_key = robot_name + "::humans"
+        self.color_image_key = robot_name + "::color_image"
+        self.depth_image_key = robot_name + "::depth_image" 
         self.head_key = robot_name + "::head"
         self.music_key_prefix = robot_name + "::music::"
 
@@ -62,22 +64,17 @@ class StatePublisher(Node):
             JointState, '/joint_states', self.publish_head, 1)
         self.head = None
 
-        # camera
-        self.camera = RealSenseCamera(width=640, height=360)
-        self.color_image = None
+        # person detection
+        self.bridge = CvBridge()
+        self.rgb_image_subscriber = message_filters.Subscriber("/camera/color_image_raw", Image)
+        self.depth_image_subscriber = message_filters.Subscriber("/camera/aligned_depth_to_color/image_raw", Image)
+        self.camera_info_subscriber = message_filters.Subscriber("/camera/color/camera_info", CameraInfo)
 
-        # human detection
+        self.synchronizer = message_filters.TimeSynchronizer([self.rgb_image_subscriber, self.depth_image_subscriber, self.camera_info_subscriber], 10)
+        self.synchronizer.registerCallback(self.publish_humans)
+
         self.yolo = YOLO("models/yolov5nu.pt")
-        self.yolo_timer = self.create_timer(0.1, self.publish_humans)
         self.yolo_threshold = 0.5
-
-        # gesture detection
-        self.detector = MediaPipeDetector(self.publish_gestures)
-        def run_detection():
-            if self.color_image is None: return
-            timestamp = int(1000 * time.time())
-            self.detector.run_detection(self.color_image, timestamp)
-        self.detector_timer = self.create_timer(0.3, run_detection)
 
         # music
         self.music_base_sub = self.create_subscription(
@@ -149,17 +146,17 @@ class StatePublisher(Node):
         except redis.exceptions.ConnectionError as e:
             print(e, f" at time {time.time() : .0f}")
 
-    def publish_humans(self):
+    def publish_humans(self, rgb_image : Image, depth_image : Image, rgb_camera_info):
+        return
         try:
             if self.pose is None or self.head is None:
                 return
             
             depth_frame, color_frame = self.camera.get_frames()
             depth_image, color_image = self.camera.convert_to_array(depth_frame, color_frame)
-            self.color_image = color_image
             height, width, c = color_image.shape
 
-            results = self.yolo([cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)], verbose=False)
+            results = self.yolo([cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)])
 
             cls = results[0].boxes.cls
             conf = results[0].boxes.conf
@@ -201,29 +198,6 @@ class StatePublisher(Node):
 
             detections_world = detections_world.tolist()
             self.redis_client.set(self.humans_key, str(detections_world))
-
-        except redis.exceptions.ConnectionError as e:
-            print(e, f" at time {time.time() : .0f}")
-
-    def publish_gestures(self, detection_result, out_image, timestamp):
-        try:
-            # for now assume only one pose detected
-            landmarks = parse_landmarks(detection_result)
-            if landmarks:
-                # y coordinates increase from top to bottom of image
-                landmarks = landmarks[0]
-                # right_raised = (landmarks["right_elbow"][1] < landmarks["right_shoulder"][1] and
-                #                 landmarks["right_hand"][1] < landmarks["right_elbow"][1])
-                # left_raised = (landmarks["left_elbow"][1] < landmarks["left_shoulder"][1] and
-                #                 landmarks["left_hand"][1] < landmarks["left_elbow"][1])
-                right_raised = landmarks["right_hand"][1] < landmarks["right_shoulder"][1]
-                left_raised = landmarks["left_hand"][1] < landmarks["left_shoulder"][1]
-            else:
-                right_raised = False
-                left_raised = False
-
-            self.redis_client.set(self.right_arm_key, str(right_raised))
-            self.redis_client.set(self.left_arm_key, str(left_raised))
 
         except redis.exceptions.ConnectionError as e:
             print(e, f" at time {time.time() : .0f}")
