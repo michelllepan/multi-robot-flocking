@@ -12,6 +12,12 @@ GOAL_TOLERANCE = 0.1
 X_MAX = 6
 Y_MAX = 4
 
+GESTURE_MAP = {
+    "left": "GESTURE_SPIN",
+    "right": "GESTURE_CLAP",
+    "both": "STOP",
+}
+
 class FlockPlanner:
 
     def __init__(self, robots, redis_config):
@@ -32,6 +38,8 @@ class FlockPlanner:
             self.redis_keys[r]["carrot"] = "robot_" + str(r) + "::carrot"
             self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
             self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
+            self.redis_keys[r]["left_raised"] = "robot_" + str(r) + "::left_raised"
+            self.redis_keys[r]["right_raised"] = "robot_" + str(r) + "::right_raised"
             self.redis_keys[r]["head"] = "robot_" + str(r) + "::head"
             self.redis_keys[r]["look"] = "robot_" + str(r) + "::look"
 
@@ -47,8 +55,12 @@ class FlockPlanner:
         self.looks = {}
         self.poses = {}
         self.humans = {}
+        self.gestures = {}
         self.heads = {}
         self.read_redis()
+
+        self.current_gesture = None
+        self.gesture_start = None
 
         # Boids setup
         while len(self.poses) != len(self.robots):
@@ -74,6 +86,24 @@ class FlockPlanner:
         self.read_redis()
         robot_positions = np.array([[self.poses[r].x, self.poses[r].y] for r in self.robots])
         self.boids_runner.move_robots(robot_positions)
+
+        gestures = [v for v in self.gestures.values()]
+        valid_gestures = [g for g in gestures if g != "none"]
+        print(gestures)
+
+        if self.current_gesture is not None:
+            if ((self.current_gesture == "left" and time.time() - self.gesture_start > 7) or
+                (self.current_gesture == "right" and "right" not in valid_gestures) or
+                (self.current_gesture == "both" and "both" not in valid_gestures)):
+                self.current_gesture = None
+                self.gesture_start = None
+                self.flock_state = "GO"
+                self.redis_clients[0].set(self.flock_state_key, self.flock_state)
+        elif valid_gestures:
+            self.current_gesture = "both" if "both" in valid_gestures else valid_gestures[0]
+            self.gesture_start = time.time()
+            self.flock_state = GESTURE_MAP[self.current_gesture]
+            self.redis_clients[0].set(self.flock_state_key, self.flock_state)
 
         # update human location
         human_candidates = [h for humans in self.humans.values() for h in humans.coords]
@@ -144,6 +174,24 @@ class FlockPlanner:
             humans = Humans.from_string(human_string)
             if humans is None: continue
             self.humans[r] = humans
+
+            gesture_left_string = self.redis_clients[r].get(self.redis_keys[r]["left_raised"])
+            if not gesture_left_string: continue
+            gesture_left = eval(gesture_left_string)
+
+            gesture_right_string = self.redis_clients[r].get(self.redis_keys[r]["right_raised"])
+            if not gesture_right_string: continue
+            gesture_right = eval(gesture_right_string)
+
+            if gesture_left:
+                if gesture_right:
+                    self.gestures[r] = "both"
+                else:
+                    self.gestures[r] = "left"
+            elif gesture_right:
+                self.gestures[r] = "right"
+            else:
+                self.gestures[r] = "none"
 
         mode_string = self.redis_clients[0].get(self.mode_key)
         if mode_string is not None:
