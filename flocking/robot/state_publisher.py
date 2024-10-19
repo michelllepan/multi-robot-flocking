@@ -37,8 +37,9 @@ class StatePublisher(Node):
         self.obstacles_front_key = robot_name + "::obstacles::front"
         self.obstacles_back_key = robot_name + "::obstacles::back"
         self.obstacles_side_key = robot_name + "::obstacles::side"
-        self.left_arm_key = robot_name + "::left_raised"
-        self.right_arm_key = robot_name + "::right_raised"
+        self.left_arm_key = robot_name + "::left_arm"
+        self.right_arm_key = robot_name + "::right_arm"
+        self.crouch_key = robot_name + "::crouched"
         self.humans_key = robot_name + "::humans"
         self.head_key = robot_name + "::head"
         self.music_key_prefix = robot_name + "::music::"
@@ -207,23 +208,45 @@ class StatePublisher(Node):
 
     def publish_gestures(self, detection_result, out_image, timestamp):
         try:
-            # for now assume only one pose detected
+            right_arm, left_arm = "none", "none"
+            crouched = False
+
             landmarks = parse_landmarks(detection_result)
             if landmarks:
-                # y coordinates increase from top to bottom of image
+                # for now assume only one pose detected
                 landmarks = landmarks[0]
-                # right_raised = (landmarks["right_elbow"][1] < landmarks["right_shoulder"][1] and
-                #                 landmarks["right_hand"][1] < landmarks["right_elbow"][1])
-                # left_raised = (landmarks["left_elbow"][1] < landmarks["left_shoulder"][1] and
-                #                 landmarks["left_hand"][1] < landmarks["left_elbow"][1])
-                right_raised = landmarks["right_hand"][1] < landmarks["right_shoulder"][1]
-                left_raised = landmarks["left_hand"][1] < landmarks["left_shoulder"][1]
-            else:
-                right_raised = False
-                left_raised = False
 
-            self.redis_client.set(self.right_arm_key, str(right_raised))
-            self.redis_client.set(self.left_arm_key, str(left_raised))
+                # x-distance from hand to shoulder is greater than 0.8 arm length
+                right_arm_length = (np.linalg.norm(landmarks["right_hand"][:2] - landmarks["right_elbow"][:2]) + 
+                                    np.linalg.norm(landmarks["right_elbow"][:2] - landmarks["right_shoulder"][:2]))
+                right_out = landmarks["right_shoulder"][0] - landmarks["right_hand"][0] > 0.8 * right_arm_length
+                left_arm_length = (np.linalg.norm(landmarks["left_hand"][:2] - landmarks["left_elbow"][:2]) + 
+                                    np.linalg.norm(landmarks["left_elbow"][:2] - landmarks["left_shoulder"][:2]))
+                left_out = landmarks["left_hand"][0] - landmarks["left_shoulder"][0] > 0.8 * left_arm_length
+
+                # elbow above shoulder and hand above elbow
+                # y coordinates increase from top to bottom of image
+                right_raised = (landmarks["right_elbow"][1] < landmarks["right_shoulder"][1] and
+                                landmarks["right_hand"][1] < landmarks["right_elbow"][1])
+                left_raised = (landmarks["left_elbow"][1] < landmarks["left_shoulder"][1] and
+                                landmarks["left_hand"][1] < landmarks["left_elbow"][1])
+
+                if right_out:
+                    right_arm = "out"
+                elif right_raised:
+                    right_arm = "raised"
+
+                if left_out:
+                    left_arm = "out"
+                elif left_raised:
+                    left_arm = "raised"
+
+                # hands below knees
+                crouched = landmarks["center_knees"][1] < landmarks["center_hands"][1]
+
+            self.redis_client.set(self.right_arm_key, right_arm)
+            self.redis_client.set(self.left_arm_key, left_arm)
+            self.redis_client.set(self.crouch_key, str(crouched))
 
         except redis.exceptions.ConnectionError as e:
             print(e, f" at time {time.time() : .0f}")
