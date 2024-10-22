@@ -9,13 +9,13 @@ from flocking.utils import Goal, Pose, Humans
 
 GOAL_TOLERANCE = 0.1
 
-X_MAX = 6
+X_MAX = 5
 Y_MAX = 4
 
 GESTURE_MAP = {
     "left": "GESTURE_SPIN",
     "right": "GESTURE_CLAP",
-    "both": "STOP",
+    "crouch": "STOP",
 }
 
 class FlockPlanner:
@@ -38,8 +38,9 @@ class FlockPlanner:
             self.redis_keys[r]["carrot"] = "robot_" + str(r) + "::carrot"
             self.redis_keys[r]["pose"] = "robot_" + str(r) + "::pose"
             self.redis_keys[r]["humans"] = "robot_" + str(r) + "::humans"
-            self.redis_keys[r]["left_raised"] = "robot_" + str(r) + "::left_raised"
-            self.redis_keys[r]["right_raised"] = "robot_" + str(r) + "::right_raised"
+            self.redis_keys[r]["left_arm"] = "robot_" + str(r) + "::left_arm"
+            self.redis_keys[r]["right_arm"] = "robot_" + str(r) + "::right_arm"
+            self.redis_keys[r]["crouched"] = "robot_" + str(r) + "::crouched"
             self.redis_keys[r]["head"] = "robot_" + str(r) + "::head"
             self.redis_keys[r]["look"] = "robot_" + str(r) + "::look"
 
@@ -89,11 +90,13 @@ class FlockPlanner:
 
         gestures = [v for v in self.gestures.values()]
         valid_gestures = [g for g in gestures if g != "none"]
-        print(gestures)
+        # print(gestures)
 
         if self.current_gesture is not None:
             if ((self.current_gesture == "left" and time.time() - self.gesture_start > 7) or
                 (self.current_gesture == "right" and "right" not in valid_gestures) or
+                (self.current_gesture == "crouch" and "crouch" not in valid_gestures) or
+                (self.current_gesture == "out" and "out" not in valid_gestures) or
                 (self.current_gesture == "both" and "both" not in valid_gestures)):
                 self.current_gesture = None
                 self.gesture_start = None
@@ -126,7 +129,7 @@ class FlockPlanner:
         #         self.human = human
 
         # update base targets
-        self.boids_runner.update_targets(steps=2, mode=self.mode)
+        self.boids_runner.update_targets(steps=2, mode=self.mode, pause_time=(self.flock_state != "GO"))
         for i in range(len(self.robots)):
             r = self.robots[i]
             t = self.boids_runner.target_positions[i]
@@ -175,21 +178,38 @@ class FlockPlanner:
             if humans is None: continue
             self.humans[r] = humans
 
-            gesture_left_string = self.redis_clients[r].get(self.redis_keys[r]["left_raised"])
+            gesture_left_string = self.redis_clients[r].get(self.redis_keys[r]["left_arm"])
             if not gesture_left_string: continue
-            gesture_left = eval(gesture_left_string)
+            gesture_left = gesture_left_string.decode("utf-8")
 
-            gesture_right_string = self.redis_clients[r].get(self.redis_keys[r]["right_raised"])
+            gesture_right_string = self.redis_clients[r].get(self.redis_keys[r]["right_arm"])
             if not gesture_right_string: continue
-            gesture_right = eval(gesture_right_string)
+            gesture_right = gesture_right_string.decode("utf-8")
 
-            if gesture_left:
-                if gesture_right:
-                    self.gestures[r] = "both"
-                else:
-                    self.gestures[r] = "left"
-            elif gesture_right:
+            crouch_string = self.redis_clients[r].get(self.redis_keys[r]["crouched"])
+            if not crouch_string: continue
+            crouch = eval(crouch_string)
+
+            # if gesture_left == "raised":
+            #     if gesture_right == "raised":
+            #         self.gestures[r] = "both"
+            #     else:
+            #         self.gestures[r] = "left"
+            # elif gesture_right == "raised":
+            #     self.gestures[r] = "right"
+            # elif gesture_left == "out" and gesture_right == "out":
+            #     self.gestures[r] = "out"
+            # elif crouch:
+            #     self.gestures[r] = "crouch"
+            # else:
+            #     self.gestures[r] = "none"
+
+            if gesture_right == "raised":
                 self.gestures[r] = "right"
+            elif gesture_left == "raised":
+                self.gestures[r] = "left"
+            elif crouch:
+                self.gestures[r] = "crouch"
             else:
                 self.gestures[r] = "none"
 

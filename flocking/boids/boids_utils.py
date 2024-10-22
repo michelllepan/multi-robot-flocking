@@ -19,7 +19,7 @@ GOAL_CAP = 2
 LINEAR_CAP = 2
 
 # period for linear function
-LINEAR_PERIOD = 40 # seconds
+LINEAR_PERIOD = 45 # seconds
 
 # how close robots have to be before separation becomes a concern
 SEPARATION_MIN_DISTANCE = 1.0
@@ -200,14 +200,14 @@ def determine_stick_positions(
 
     if width > height: # this is the one
         robot_lanes = sorted_indices[:, 0] # assign lane from order on x-axis
-        lane_x = x_min + (width / (num_robots + 1)) * robot_lanes
+        lane_x = x_min + (width / (num_robots)) * (robot_lanes - 0.7)
         center_y = (y_min + y_max) / 2
         goal_x = (0.4 * np.cos(radians)) + lane_x + 2
         goal_y = (np.sin(radians) * height / 2) + center_y * np.ones(num_robots)
 
     else:
         robot_lanes = sorted_indices[:, 1] # assign lane from order on y-axis
-        lane_y = y_min + (height / (num_robots + 1)) * robot_lanes
+        lane_y = y_min + (height / (num_robots)) * (robot_lanes - 0.7)
         center_x = (x_min + x_max) / 2
         goal_y = (0.4 * np.cos(radians)) + lane_y + 2
         goal_x = (np.sin(radians) * width / 2) + center_x * np.ones(num_robots)

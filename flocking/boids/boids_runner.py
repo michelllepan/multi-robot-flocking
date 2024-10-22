@@ -33,6 +33,7 @@ class BoidsRunner:
 
         self.last_time = time.time()
         self.current_time = time.time()
+        self.paused_time = 0.0
         
         self.carrot_positions = self._get_carrots()
         self.step_scale = step_scale
@@ -80,7 +81,7 @@ class BoidsRunner:
             pos = determine_carrot_position(
                 robot_id=robot_id,
                 region=(0, self.width, 0, self.height),
-                timestamp=self.current_time,
+                timestamp=self.current_time - self.paused_time,
                 num_robots=self.num_robots)
             carrots.append(pos)
         return np.vstack(carrots)
@@ -88,7 +89,7 @@ class BoidsRunner:
     def _get_sticks(self):
         return determine_stick_positions(
             region=(0, self.width, 0, self.height),
-            timestamp=self.current_time,
+            timestamp=self.current_time - self.paused_time,
             robot_positions=self.robot_positions,
         )
     
@@ -178,8 +179,8 @@ class BoidsRunner:
             human_position=self.human_position,
             last_robot_positions=self.last_robot_positions,
             last_human_position=self.last_human_position,
-            current_time=self.current_time,
-            last_time=self.last_time,
+            current_time=self.current_time - self.paused_time,
+            last_time=self.last_time - self.paused_time,
             mode=mode,
         )
     
@@ -201,17 +202,21 @@ class BoidsRunner:
         self,
         steps: int = 1,
         mode: str = "DEFAULT",
+        pause_time: bool = False,
     ):
         self.last_time = self.current_time
         self.current_time = time.time()
+        if pause_time:
+            print("pausing time")
+            self.paused_time += self.current_time - self.last_time
 
         self.carrot_positions = self._get_carrots()
 
         positions = self.robot_positions
         last_positions = self.last_robot_positions
         
-        current_time = self.current_time
-        last_time = self.last_time
+        current_time = self.current_time - self.paused_time
+        last_time = self.last_time - self.paused_time
 
         for i in range(steps):
             targets = np.zeros_like(positions)

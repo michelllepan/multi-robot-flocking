@@ -20,20 +20,52 @@ class ArmMover:
 
         if flock_state == "GESTURE_CLAP":
             self.clap()
+        elif flock_state == "GESTURE_LOWER":
+            self.lower()
+        elif flock_state == "GESTURE_RAISE":
+            self.raise_arms()
         else:
             self.oscillate()
 
     def clap(self):
         gripper_open = int(time.time()) % 2 == 0
-        # print(gripper_open)
-        # gripper_open = False
         arm_dict = {
             "lift": (0.5, 0.03),
             "gripper_finger_left": (0.2 if gripper_open else 0.0, 30.0),
-            # "gripper_finger_right": (0.5 if gripper_open else 0.0, 0.5),
-            # "gripper_aperture": (0.5 if gripper_open else 0.0, 0.5),
         }
         for r in self.robots:
+            self.redis_clients[r].set(f"robot_{r}::arm", str(arm_dict))
+
+    def lower(self):
+        for r in self.robots:
+            lift = 0.27 + 0.05 * np.sin(time.time() * np.pi * 2 / 10 + 8 + r)
+            arm = 0.01 + 0.01 * np.sin(time.time() * np.pi * 2 / 9 + 3 + r)
+            wrist_pitch = -0.25 + 0.25 * np.sin(time.time() * np.pi * 2 / 7 + r)
+
+            arm_dict = {
+                "lift": (lift, 0.02),
+                "arm_l3": (arm, 0.015),
+                "arm_l2": (arm, 0.015),
+                "arm_l1": (arm, 0.015),
+                "arm_l0": (arm, 0.02),
+                "wrist_pitch": (wrist_pitch, 0.2),
+            }
+            self.redis_clients[r].set(f"robot_{r}::arm", str(arm_dict))
+
+    def raise_arms(self):
+        for r in self.robots:
+            lift = 0.8
+            arm = 0.05
+            wrist_pitch = -0.25 + 0.25 * np.sin(time.time() * np.pi * 2 / 7 + r)
+
+            arm_dict = {
+                "lift": (lift, 0.04),
+                "arm_l3": (arm, 0.015),
+                "arm_l2": (arm, 0.015),
+                "arm_l1": (arm, 0.015),
+                "arm_l0": (arm, 0.02),
+                "wrist_pitch": (wrist_pitch, 0.2),
+            }
             self.redis_clients[r].set(f"robot_{r}::arm", str(arm_dict))
 
     def oscillate(self):
