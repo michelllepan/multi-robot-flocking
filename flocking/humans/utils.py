@@ -29,6 +29,7 @@ def parse_landmarks(detection_result):
         left_elbow = landmark_to_vec(pose_landmarks[13])
         left_shoulder = landmark_to_vec(pose_landmarks[11])
         left_hip = landmark_to_vec(pose_landmarks[23])
+        left_knee = landmark_to_vec(pose_landmarks[25])
 
         # RIGHT
         right_pinky = landmark_to_vec(pose_landmarks[18])
@@ -39,10 +40,13 @@ def parse_landmarks(detection_result):
         right_elbow = landmark_to_vec(pose_landmarks[14])
         right_shoulder = landmark_to_vec(pose_landmarks[12])
         right_hip = landmark_to_vec(pose_landmarks[24])
+        right_knee = landmark_to_vec(pose_landmarks[26])
 
         # CENTER
+        center_hands = np.mean((left_hand, right_hand), axis=0)
         center_shoulder = np.mean((left_shoulder, right_shoulder), axis=0)
         center_hips = np.mean((left_hip, right_hip), axis=0)
+        center_knee = np.mean((left_knee, right_knee), axis=0)
 
         landmarks.append({
             "left_hand": left_hand,
@@ -51,7 +55,9 @@ def parse_landmarks(detection_result):
             "right_hand": right_hand,
             "right_elbow": right_elbow,
             "right_shoulder": right_shoulder,
+            "center_hands": center_hands,
             "center_shoulder": center_shoulder,
-            "center_hips": center_hips})
+            "center_hips": center_hips,
+            "center_knees": center_knee})
 
     return landmarks

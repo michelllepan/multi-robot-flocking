@@ -133,7 +133,7 @@ class FlockFollower(Node):
             self.vel_pub.publish(self.twist)
             return
         
-        if self.flock_state == "STOP":
+        if self.flock_state in ("STOP", "GESTURE_LOWER", "GESTURE_RAISE"):
             self.twist.linear.x = 0.0
             self.twist.angular.z = 0.0
             self.vel_pub.publish(self.twist)
