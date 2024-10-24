@@ -121,10 +121,17 @@ class BoidsRunner:
             other_positions=other_positions,
         ) * weights.cohesion
 
-        separation_vec = compute_separation(
-            this_position=this_position,
-            other_positions=other_positions,
-        ) * weights.separation
+        if weights.separation < 0:
+            separation_vec = compute_separation(
+                this_position=this_position,
+                other_positions=other_positions,
+                distance_override=3.0,
+            ) * weights.separation
+        else:
+            separation_vec = compute_separation(
+                this_position=this_position,
+                other_positions=other_positions,
+            ) * weights.separation
 
         alignment_vec = compute_alignment(
             other_positions=other_positions,

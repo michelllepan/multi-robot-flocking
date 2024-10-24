@@ -50,6 +50,7 @@ def compute_cohesion(
 def compute_separation(
     this_position : np.ndarray,
     other_positions: Sequence[np.ndarray],
+    distance_override: float = -1.0,
 ) -> np.ndarray:
     """
     Compute Separation - Boids want to stay apart.
@@ -62,9 +63,10 @@ def compute_separation(
     separation_vec = np.zeros((2,), dtype=float)
 
     distance_vecs = this_position - other_positions
+    min_distance = distance_override if distance_override > 0 else SEPARATION_MIN_DISTANCE
     for i in range(distance_vecs.shape[0]):
         distance_vec = distance_vecs[i]
-        separation = np.linalg.norm(distance_vec) - SEPARATION_MIN_DISTANCE
+        separation = np.linalg.norm(distance_vec) - min_distance
         if separation < 0:
             separation_vec += -distance_vec * separation
 
